@@ -1,40 +1,258 @@
 <!doctype html>
-<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>宜蘭高架履約管制 TEST</title>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>宜蘭高架履約管制 TEST V1.1</title>
 <style>
-body{margin:0;font-family:system-ui,"Noto Sans TC",sans-serif;background:#f4f7fb;color:#182230}.hide{display:none!important}
-.login{min-height:100vh;display:grid;place-items:center;padding:20px}.box,.card,.panel{background:#fff;border:1px solid #dce3ec;border-radius:14px;padding:20px}.box{width:min(420px,100%)}
-input,button{width:100%;padding:11px;margin:7px 0;border:1px solid #ccd5e1;border-radius:8px;box-sizing:border-box}button{background:#1f5fbf;color:#fff;font-weight:700}
-.top{background:#17365d;color:#fff;padding:15px 22px;display:flex;justify-content:space-between}.main{max-width:1300px;margin:auto;padding:20px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.projects{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.num{font-size:28px;font-weight:800}.muted{color:#687386;font-size:12px}
-.row{display:grid;grid-template-columns:90px 1fr 120px 120px;gap:8px;padding:10px 14px;border-top:1px solid #edf0f4;font-size:13px}.head{font-weight:700;background:#eef3f9}
-.perm{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.active{outline:2px solid #1f5fbf;background:#f2f7ff}.tag{background:#ffffff22;padding:5px 9px;border-radius:20px;font-size:12px}
-.err{color:#b42318;font-size:13px}.panel{margin-top:14px}.note{margin-top:14px;padding:12px;background:#fff8e8;border-radius:10px;font-size:12px}
-@media(max-width:800px){.grid{grid-template-columns:1fr 1fr}.projects,.perm{grid-template-columns:1fr}.row{grid-template-columns:70px 1fr 100px}.sm{display:none}}
-</style></head><body>
-<div id="login" class="login"><form id="form" class="box"><h2>宜蘭高架委設監造履約管制系統</h2><div class="muted">TEST V1｜Supabase 雲端登入</div>
-<input id="email" type="email" autocomplete="username" value="rbereo.0002@gmail.com" required><input id="pw" type="password" autocomplete="current-password" placeholder="密碼" required>
-<button type="submit">登入系統</button><div id="err" class="err"></div><div class="muted">不儲存密碼；資料權限由 Supabase Auth + RLS 控制。</div></form></div>
-<div id="app" class="hide"><header class="top"><b>宜蘭至羅東鐵路高架化工程｜履約管制 TEST</b><div><span id="role" class="tag"></span> <span id="who"></span> <button id="out" style="width:auto;background:transparent">登出</button></div></header>
-<main class="main"><h2>主管 Dashboard</h2><div id="time" class="muted">讀取中…</div>
-<section class="grid"><div class="card"><div class="muted">北／南段標案</div><div id="pc" class="num">-</div></div><div class="card"><div class="muted">主管里程碑</div><div id="mc" class="num">-</div></div><div class="card"><div class="muted">已完成</div><div id="cc" class="num">-</div></div><div class="card"><div class="muted">逾期／即將到期</div><div id="ac" class="num">-</div></div></section>
-<section id="projects" class="projects"></section><section class="panel" style="padding:0;overflow:hidden"><div class="row head"><div>標案</div><div>主要里程碑</div><div>狀態</div><div class="sm">契約期限</div></div><div id="rows"></div></section>
-<section class="panel"><b>權限驗證</b><div class="muted">目前角色反白；資料庫另由 RLS 強制控管。</div><div class="perm"><div id="VIEWER" class="card"><b>Viewer</b><div class="muted">唯讀</div></div><div id="EDITOR" class="card"><b>Editor</b><div class="muted">一般資料新增／修改</div></div><div id="ADMIN" class="card"><b>Admin</b><div class="muted">完整管理權限</div></div></div></section>
-<div class="note">TEST V1 僅驗證：登入／登出、北南段 Dashboard、Viewer／Editor／Admin 角色辨識。</div></main></div>
+:root{--nav:#17365d;--blue:#1f5fbf;--bg:#f4f7fb;--line:#dce3ec;--muted:#687386;--bad:#b42318;--ok:#17803d}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;background:var(--bg);color:#182230}
+.hide{display:none!important}.login{min-height:100vh;display:grid;place-items:center;padding:20px}.box,.card,.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px}
+.box{width:min(440px,100%);box-shadow:0 16px 45px #17365d18}.box h2{margin:0 0 6px}.muted{color:var(--muted);font-size:12px;line-height:1.6}
+input,button{width:100%;padding:11px;margin:7px 0;border:1px solid #ccd5e1;border-radius:8px;font:inherit}button{background:var(--blue);color:#fff;font-weight:700;cursor:pointer}
+button.secondary{background:#fff;color:var(--blue)}button.link{background:transparent;color:var(--blue);border:0;padding:3px;text-align:left;width:auto}
+.err{color:var(--bad);font-size:13px;margin-top:8px}.ok{color:var(--ok);font-size:13px;margin-top:8px}
+.top{background:var(--nav);color:#fff;padding:15px 22px;display:flex;justify-content:space-between;align-items:center;gap:10px}.top button{width:auto;background:transparent;margin:0}
+.main{max-width:1300px;margin:auto;padding:20px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.projects{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.num{font-size:28px;font-weight:800}
+.row{display:grid;grid-template-columns:90px 1fr 120px 120px;gap:8px;padding:10px 14px;border-top:1px solid #edf0f4;font-size:13px}.head{font-weight:700;background:#eef3f9}.panel{margin-top:14px}
+.perm{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.active{outline:2px solid var(--blue);background:#f2f7ff}.tag{background:#ffffff22;padding:5px 9px;border-radius:20px;font-size:12px}
+.note{margin-top:14px;padding:12px;border-radius:10px;background:#fff8e8;color:#785400;font-size:12px}.divider{height:1px;background:#edf0f4;margin:16px 0}
+@media(max-width:800px){.grid{grid-template-columns:1fr 1fr}.projects,.perm{grid-template-columns:1fr}.row{grid-template-columns:70px 1fr 100px}.sm{display:none}.top{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+
+<div id="loginView" class="login">
+  <div class="box">
+    <h2>宜蘭高架委設監造履約管制系統</h2>
+    <div class="muted">TEST V1.1｜Supabase 雲端登入</div>
+
+    <form id="loginForm">
+      <input id="email" type="email" autocomplete="username" value="rbereo.0002@gmail.com" required>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="密碼" required>
+      <button type="submit">登入系統</button>
+      <div id="loginErr" class="err"></div>
+    </form>
+
+    <button id="forgotBtn" class="link" type="button">忘記密碼／寄送重設信</button>
+    <div id="recoveryMsg" class="ok"></div>
+
+    <div class="divider"></div>
+    <div class="muted">不儲存密碼；資料權限由 Supabase Auth + RLS 控制。密碼重設信會導回本測試站。</div>
+  </div>
+</div>
+
+<div id="resetView" class="login hide">
+  <form id="resetForm" class="box">
+    <h2>設定新密碼</h2>
+    <div class="muted">已從 Supabase recovery link 進入。請設定新的系統登入密碼。</div>
+    <input id="newPw1" type="password" minlength="10" autocomplete="new-password" placeholder="新密碼（至少10字元）" required>
+    <input id="newPw2" type="password" minlength="10" autocomplete="new-password" placeholder="再次輸入新密碼" required>
+    <button type="submit">儲存新密碼</button>
+    <div id="resetErr" class="err"></div>
+    <div id="resetOk" class="ok"></div>
+  </form>
+</div>
+
+<div id="appView" class="hide">
+<header class="top">
+  <b>宜蘭至羅東鐵路高架化工程｜履約管制 TEST V1.1</b>
+  <div><span id="role" class="tag"></span> <span id="who" style="font-size:12px"></span> <button id="out">登出</button></div>
+</header>
+<main class="main">
+  <h2 style="margin-bottom:4px">主管 Dashboard</h2>
+  <div id="time" class="muted">讀取中…</div>
+
+  <section class="grid" style="margin-top:14px">
+    <div class="card"><div class="muted">北／南段標案</div><div id="pc" class="num">-</div></div>
+    <div class="card"><div class="muted">主管里程碑</div><div id="mc" class="num">-</div></div>
+    <div class="card"><div class="muted">已完成</div><div id="cc" class="num">-</div></div>
+    <div class="card"><div class="muted">逾期／即將到期</div><div id="ac" class="num">-</div></div>
+  </section>
+
+  <section id="projects" class="projects"></section>
+
+  <section class="panel" style="padding:0;overflow:hidden">
+    <div class="row head"><div>標案</div><div>主要里程碑</div><div>狀態</div><div class="sm">契約期限</div></div>
+    <div id="rows"></div>
+  </section>
+
+  <section class="panel">
+    <b>權限驗證</b>
+    <div class="muted">目前角色反白；資料庫另由 RLS 強制控管。</div>
+    <div class="perm">
+      <div id="VIEWER" class="card"><b>Viewer</b><div class="muted">唯讀</div></div>
+      <div id="EDITOR" class="card"><b>Editor</b><div class="muted">一般資料新增／修改</div></div>
+      <div id="ADMIN" class="card"><b>Admin</b><div class="muted">完整管理權限</div></div>
+    </div>
+  </section>
+
+  <div class="note">TEST V1.1：登入／登出、密碼重設、北南段 Dashboard、Viewer／Editor／Admin 角色辨識。</div>
+</main>
+</div>
+
 <script type="module">
-import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
-const s=createClient('https://gpxnervtwrancfrukdba.supabase.co','sb_publishable_2TaZAQtvOrOGqTqD7kOMkw_JtIDcbYk',{auth:{persistSession:true,autoRefreshToken:true}});
-const q=x=>document.getElementById(x),st={NOT_STARTED:'尚未開始',IN_PROGRESS:'辦理中',DUE_SOON:'即將到期',UNDER_REVIEW:'審查中',REVISION:'修正中',OVERDUE:'逾期',COMPLETED:'已完成',SUSPENDED:'暫停'};
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL='https://gpxnervtwrancfrukdba.supabase.co';
+const SUPABASE_KEY='sb_publishable_2TaZAQtvOrOGqTqD7kOMkw_JtIDcbYk';
+const SITE_URL='https://lwtlin-sketch.github.io/yilan-rail-dashboard/test/';
+const s=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+
+const q=x=>document.getElementById(x);
+const st={NOT_STARTED:'尚未開始',IN_PROGRESS:'辦理中',DUE_SOON:'即將到期',UNDER_REVIEW:'審查中',REVISION:'修正中',OVERDUE:'逾期',COMPLETED:'已完成',SUSPENDED:'暫停'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function show(){const{data:{session}}=await s.auth.getSession();if(!session){q('login').classList.remove('hide');q('app').classList.add('hide');return}
-q('login').classList.add('hide');q('app').classList.remove('hide');q('who').textContent=session.user.email||'';
-const{data:u,error:ue}=await s.from('user_profiles').select('role,is_active').eq('user_id',session.user.id).single();if(ue||!u||!u.is_active){await s.auth.signOut();q('err').textContent='此帳號尚未取得系統權限';return show()}
-q('role').textContent=u.role;['VIEWER','EDITOR','ADMIN'].forEach(r=>q(r).classList.toggle('active',r===u.role));
-const[pr,mr]=await Promise.all([s.from('projects').select('id,short_name,project_name,pre_tender_budget_amount').order('project_code'),s.from('milestones').select('project_id,milestone_name,stage,status,progress_percent,contract_due_date,dashboard_visible').eq('dashboard_visible',true).order('milestone_code')]);
-if(pr.error||mr.error){q('time').textContent='資料讀取失敗：'+(pr.error?.message||mr.error?.message);return}const p=pr.data||[],m=mr.data||[];
-q('pc').textContent=p.length;q('mc').textContent=m.length;q('cc').textContent=m.filter(x=>x.status==='COMPLETED').length;q('ac').textContent=m.filter(x=>['OVERDUE','DUE_SOON'].includes(x.status)).length;q('time').textContent='雲端資料讀取成功｜'+new Date().toLocaleString('zh-TW');
-q('projects').innerHTML=p.map(x=>{const a=m.filter(y=>y.project_id===x.id),d=a.filter(y=>y.status==='COMPLETED').length,avg=a.length?Math.round(a.reduce((z,y)=>z+Number(y.progress_percent||0),0)/a.length):0,b=x.pre_tender_budget_amount?Number(x.pre_tender_budget_amount).toLocaleString('zh-TW')+' 元':'待確認';return '<div class="card"><h3>'+esc(x.short_name)+'</h3><div class="muted">'+esc(x.project_name)+'</div><p>主要里程碑：<b>'+a.length+'</b>　已完成：<b>'+d+'</b>　平均進度：<b>'+avg+'%</b></p><div class="muted">招標前預算基準：'+b+'</div></div>'}).join('');
-const pm=Object.fromEntries(p.map(x=>[x.id,x.short_name]));q('rows').innerHTML=m.map(x=>'<div class="row"><div>'+esc(pm[x.project_id]||'')+'</div><div>'+esc(x.stage)+'｜'+esc(x.milestone_name)+'</div><div>'+esc(st[x.status]||x.status)+'</div><div class="sm">'+esc(x.contract_due_date||'待起算')+'</div></div>').join('')}
-q('form').onsubmit=async e=>{e.preventDefault();q('err').textContent='';const{error}=await s.auth.signInWithPassword({email:q('email').value.trim(),password:q('pw').value});if(error)q('err').textContent='登入失敗：'+error.message;else show()};
-q('out').onclick=async()=>{await s.auth.signOut();q('pw').value='';show()};show();
-</script></body></html>
+
+function setView(name){
+  q('loginView').classList.toggle('hide',name!=='login');
+  q('resetView').classList.toggle('hide',name!=='reset');
+  q('appView').classList.toggle('hide',name!=='app');
+}
+
+function urlSuggestsRecovery(){
+  const h=location.hash||'';
+  const s=location.search||'';
+  return h.includes('type=recovery') || s.includes('type=recovery') || h.includes('access_token=');
+}
+
+async function boot(){
+  const {data:{session}}=await s.auth.getSession();
+
+  if(urlSuggestsRecovery() && session){
+    setView('reset');
+    return;
+  }
+
+  if(!session){
+    setView('login');
+    return;
+  }
+
+  setView('app');
+  await loadDashboard(session);
+}
+
+q('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  q('loginErr').textContent='';
+  const {error}=await s.auth.signInWithPassword({
+    email:q('email').value.trim(),
+    password:q('pw').value
+  });
+  if(error){
+    q('loginErr').textContent='登入失敗：'+error.message;
+    return;
+  }
+  await boot();
+});
+
+q('forgotBtn').addEventListener('click',async()=>{
+  q('loginErr').textContent='';
+  q('recoveryMsg').textContent='';
+  const email=q('email').value.trim();
+  if(!email){
+    q('loginErr').textContent='請先輸入 Email';
+    return;
+  }
+  const {error}=await s.auth.resetPasswordForEmail(email,{redirectTo:SITE_URL});
+  if(error){
+    q('loginErr').textContent='無法寄送重設信：'+error.message;
+    return;
+  }
+  q('recoveryMsg').textContent='密碼重設信已寄出，請到信箱收信。';
+});
+
+q('resetForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  q('resetErr').textContent='';
+  q('resetOk').textContent='';
+  const p1=q('newPw1').value;
+  const p2=q('newPw2').value;
+  if(p1.length<10){
+    q('resetErr').textContent='新密碼至少10字元。';
+    return;
+  }
+  if(p1!==p2){
+    q('resetErr').textContent='兩次輸入的密碼不一致。';
+    return;
+  }
+  const {error}=await s.auth.updateUser({password:p1});
+  if(error){
+    q('resetErr').textContent='密碼更新失敗：'+error.message;
+    return;
+  }
+  q('resetOk').textContent='新密碼已設定完成，正在進入系統…';
+  history.replaceState({},document.title,location.pathname);
+  setTimeout(()=>boot(),700);
+});
+
+q('out').addEventListener('click',async()=>{
+  await s.auth.signOut();
+  q('pw').value='';
+  history.replaceState({},document.title,location.pathname);
+  await boot();
+});
+
+async function loadDashboard(session){
+  q('who').textContent=session.user.email||'';
+
+  const {data:u,error:ue}=await s.from('user_profiles')
+    .select('role,is_active')
+    .eq('user_id',session.user.id)
+    .single();
+
+  if(ue||!u||!u.is_active){
+    await s.auth.signOut();
+    q('loginErr').textContent='此帳號尚未取得系統權限。';
+    return boot();
+  }
+
+  q('role').textContent=u.role;
+  ['VIEWER','EDITOR','ADMIN'].forEach(r=>q(r).classList.toggle('active',r===u.role));
+
+  const [pr,mr]=await Promise.all([
+    s.from('projects')
+      .select('id,short_name,project_name,pre_tender_budget_amount')
+      .order('project_code'),
+    s.from('milestones')
+      .select('project_id,milestone_name,stage,status,progress_percent,contract_due_date,dashboard_visible')
+      .eq('dashboard_visible',true)
+      .order('milestone_code')
+  ]);
+
+  if(pr.error||mr.error){
+    q('time').textContent='雲端資料讀取失敗：'+(pr.error?.message||mr.error?.message);
+    return;
+  }
+
+  const p=pr.data||[],m=mr.data||[];
+  q('pc').textContent=p.length;
+  q('mc').textContent=m.length;
+  q('cc').textContent=m.filter(x=>x.status==='COMPLETED').length;
+  q('ac').textContent=m.filter(x=>['OVERDUE','DUE_SOON'].includes(x.status)).length;
+  q('time').textContent='雲端資料讀取成功｜'+new Date().toLocaleString('zh-TW');
+
+  q('projects').innerHTML=p.map(x=>{
+    const a=m.filter(y=>y.project_id===x.id);
+    const d=a.filter(y=>y.status==='COMPLETED').length;
+    const avg=a.length?Math.round(a.reduce((z,y)=>z+Number(y.progress_percent||0),0)/a.length):0;
+    const b=x.pre_tender_budget_amount?Number(x.pre_tender_budget_amount).toLocaleString('zh-TW')+' 元':'待確認';
+    return '<article class="card"><h3>'+esc(x.short_name)+'</h3><div class="muted">'+esc(x.project_name)+'</div><p>主要里程碑：<b>'+a.length+'</b>　已完成：<b>'+d+'</b>　平均進度：<b>'+avg+'%</b></p><div class="muted">招標前預算基準：'+b+'</div></article>';
+  }).join('');
+
+  const pm=Object.fromEntries(p.map(x=>[x.id,x.short_name]));
+  q('rows').innerHTML=m.map(x=>
+    '<div class="row"><div>'+esc(pm[x.project_id]||'')+'</div><div>'+esc(x.stage)+'｜'+esc(x.milestone_name)+'</div><div>'+esc(st[x.status]||x.status)+'</div><div class="sm">'+esc(x.contract_due_date||'待起算')+'</div></div>'
+  ).join('');
+}
+
+s.auth.onAuthStateChange((event,session)=>{
+  if(event==='PASSWORD_RECOVERY' && session){
+    setView('reset');
+  }
+});
+
+boot();
+</script>
+</body>
+</html>
