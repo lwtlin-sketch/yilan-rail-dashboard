@@ -1,6 +1,228 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>宜蘭高架｜履約期程與付款管制</title><link rel="stylesheet" href="style.css"></head><body><div class="wrap">
 <section class="hero"><h1 id="heroTitle">宜蘭至羅東鐵路高架化計畫｜履約期程＋付款管制</h1><p id="heroSub"></p><div id="badges"></div></section>
 <div class="segment-wrap"><div class="segment-label">切換標段</div><div id="segmentButtons" class="segment-buttons"></div></div><div class="toolbar"><button class="btn primary edit-only" onclick="recalc()">重新計算</button><button class="btn edit-only" onclick="saveLocal()">儲存本機</button><button class="btn edit-only" onclick="exportProjectJSON()">匯出專案 JSON</button><button class="btn edit-only" onclick="importProjectJSON()">匯入專案 JSON</button><button class="btn" onclick="exportExcel()">匯出 Excel 相容檔</button><button class="btn" onclick="toggleViewMode()">切換公開檢視</button><button class="btn" onclick="window.print()">列印 / PDF</button><button class="btn warn edit-only" onclick="resetLocal()">恢復 GitHub 資料</button><div class="project-switch"><b>標段：</b><select id="projectSelect" onchange="switchProject(this.value)"></select></div></div>
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>宜蘭高架｜履約期程與付款管制</title><link rel="stylesheet" href="style.css"></head><body><div class="wrap">
+<section class="hero"><h1 id="heroTitle">宜蘭至羅東鐵路高架化計畫｜履約期程＋付款管制</h1><p id="heroSub"></p><div id="badges"></div></section>
+<div class="segment-wrap"><div class="segment-label">切換標段</div><div id="segmentButtons" class="segment-buttons"></div></div><div class="toolbar"><button class="btn primary edit-only" onclick="recalc()">重新計算</button><button class="btn edit-only" onclick="saveLocal()">儲存本機</button><button class="btn edit-only" onclick="exportProjectJSON()">匯出專案 JSON</button><button class="btn edit-only" onclick="importProjectJSON()">匯入專案 JSON</button><button class="btn" onclick="exportExcel()">匯出 Excel 相容檔</button><button class="btn" onclick="toggleViewMode()">切換公開檢視</button><button class="btn" onclick="window.print()">列印 / PDF</button><button class="btn warn edit-only" onclick="resetLocal()">恢復 GitHub 資料</button><div class="project-switch"><b>標段：</b><select id="projectSelect" onchange="switchProject(this.value)"></select></div></div>
+<div class="grid">
+<section class="card"><div class="hd"><h2>一、基準日與管制假設</h2></div><div class="bd"><div class="formgrid">
+<!-- ===== 登入後首頁 / 管制總覽 ===== -->
+<section class="overview" id="overview">
+
+  <div class="overview-head">
+    <div>
+      <h2>履約管制總覽</h2>
+      <div class="overview-sub" id="overviewSub">
+        依目前登錄資料自動彙整
+      </div>
+    </div>
+
+    <div class="overview-date">
+      <span>今日</span>
+      <b id="overviewToday">-</b>
+    </div>
+  </div>
+
+  <!-- 專案基本狀態 -->
+  <div class="overview-project">
+    <div class="overview-project-item">
+      <span>目前標段</span>
+      <b id="ovProject">-</b>
+    </div>
+
+    <div class="overview-project-item">
+      <span>簽約日</span>
+      <b id="ovSignDate">-</b>
+    </div>
+
+    <div class="overview-project-item">
+      <span>整體狀態</span>
+      <b id="ovOverallStatus">-</b>
+    </div>
+
+    <div class="overview-project-item">
+      <span>設計成果完成度</span>
+      <b id="ovProgress">0%</b>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="overview-kpis">
+
+    <button class="kpi kpi-danger"
+            type="button"
+            onclick="scrollToSchedule()">
+      <span class="kpi-label">已逾期</span>
+      <strong id="ovOverdue">0</strong>
+      <small>項</small>
+    </button>
+
+    <button class="kpi kpi-warning"
+            type="button"
+            onclick="scrollToSchedule()">
+      <span class="kpi-label">14日內到期</span>
+      <strong id="ovDue14">0</strong>
+      <small>項</small>
+    </button>
+
+    <button class="kpi kpi-info"
+            type="button"
+            onclick="scrollToSchedule()">
+      <span class="kpi-label">30日內到期</span>
+      <strong id="ovDue30">0</strong>
+      <small>項</small>
+    </button>
+
+    <button class="kpi kpi-pending"
+            type="button"
+            onclick="scrollToSchedule()">
+      <span class="kpi-label">待核定</span>
+      <strong id="ovPendingApproval">0</strong>
+      <small>項</small>
+    </button>
+
+    <button class="kpi kpi-success"
+            type="button"
+            onclick="scrollToSchedule()">
+      <span class="kpi-label">已完成</span>
+      <strong id="ovCompleted">0</strong>
+      <small>項</small>
+    </button>
+
+  </div>
+
+  <div class="overview-columns">
+
+    <!-- 左：近期重要工作 -->
+    <div class="overview-panel overview-work">
+      <div class="overview-panel-title">
+        <div>
+          <h3>近期重要工作</h3>
+          <span>優先顯示逾期及30日內到期成果</span>
+        </div>
+
+        <button class="mini-btn"
+                type="button"
+                onclick="scrollToSchedule()">
+          查看完整時程
+        </button>
+      </div>
+
+      <div id="ovImportantWorks"
+           class="overview-work-list">
+      </div>
+    </div>
+
+    <!-- 右：進度 -->
+    <div class="overview-panel">
+
+      <div class="overview-panel-title">
+        <div>
+          <h3>設計階段進度</h3>
+          <span>依實際核定成果計算</span>
+        </div>
+      </div>
+
+      <div class="progress-row">
+        <div class="progress-text">
+          <span>整體成果完成</span>
+          <b id="ovProgressText">0 / 0</b>
+        </div>
+
+        <div class="progress-track">
+          <div class="progress-bar"
+               id="ovProgressBar"
+               style="width:0%"></div>
+        </div>
+      </div>
+
+      <div id="ovStageList"
+           class="stage-summary">
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- 付款摘要 -->
+  <div class="overview-panel overview-payment">
+
+    <div class="overview-panel-title">
+      <div>
+        <h3>經費付款摘要</h3>
+        <span>與既有付款預測表同步</span>
+      </div>
+
+      <button class="mini-btn"
+              type="button"
+              onclick="scrollToPayment()">
+        查看付款明細
+      </button>
+    </div>
+
+    <div class="payment-kpis">
+
+      <div class="payment-kpi">
+        <span>已達付款條件</span>
+        <b id="ovPayReadyCount">0 項</b>
+      </div>
+
+      <div class="payment-kpi">
+        <span>預估可請款</span>
+        <b id="ovPayReadyAmount">0 元</b>
+      </div>
+
+      <div class="payment-kpi">
+        <span>尚待付款條件</span>
+        <b id="ovPayPendingAmount">0 元</b>
+      </div>
+
+      <div class="payment-kpi">
+        <span>最近預估付款日</span>
+        <b id="ovNextPayDate">-</b>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- 第二階段功能入口 -->
+  <div class="future-modules">
+
+    <div class="future-module">
+      <b>甘特圖</b>
+      <span>共用目前履約主時程資料</span>
+      <em>下一階段</em>
+    </div>
+
+    <div class="future-module">
+      <b>時程關聯圖</b>
+      <span>顯示成果前後置及延誤影響</span>
+      <em>下一階段</em>
+    </div>
+
+    <div class="future-module">
+      <b>付款里程碑連動</b>
+      <span>成果核定後同步付款節點</span>
+      <em>下一階段</em>
+    </div>
+
+  </div>
+
+</section>
+<!-- ===== 管制總覽結束 ===== -->
+<div class="field"><label>決標日</label><input type="date" id="awardDate"></div><div class="field"><label>評選日</label><input type="date" id="evaluationDate"></div><div class="field"><label>議價日</label><input type="date" id="negotiationDate"></div><div class="field"><label>簽約日</label><input type="date" id="signDate"></div>
+<div class="field"><label>PCM 管理預估審查日數（日曆天）</label><input type="number" id="pcmDays" value="30"><div class="hint">管理假設，不視為契約明定期限。</div></div><div class="field"><label>付款行政作業估算</label><select id="payMode"><option value="30">15工作天審核 + 15工作天付款</option><option value="15">僅估15工作天付款</option><option value="0">不加行政作業日</option></select></div><div class="field"><label>估算模式</label><select id="forecastMode"><option value="budget">依預算書</option><option value="contract">依契約/決標分項</option></select></div><div class="field"><label>期末設計甲方通知日（如有）</label><input type="date" id="noticeDate"></div>
+<div class="field"><label>工程會核定日</label><input type="date" id="pccDate"></div><div class="field"><label>招標文件核定日</label><input type="date" id="tenderApprovalDate"></div><div class="field"><label>各分標工程全部決標日</label><input type="date" id="allWorksAwardDate"></div><div class="field"><label>全部工程驗收結算完成日</label><input type="date" id="allWorksCloseDate"></div>
+<div class="field" style="grid-column:span 4"><label>自訂非工作日（逗號或換行分隔 YYYY-MM-DD）</label><textarea id="holidays"></textarea></div></div></div></section>
+<section class="card"><div class="hd"><h2>二、預算 / 契約金額基準</h2></div><div class="bd"><div class="note" id="budgetNote"></div><div class="scroll" style="margin-top:12px"><table class="tbl" style="min-width:850px" id="budgetTable"><thead><tr><th>項目</th><th>預算書金額</th><th>契約 / 決標分項金額</th><th>估算採用金額</th><th>備註</th></tr></thead><tbody></tbody></table></div></div></section>
+<section class="card"><div class="hd"><h2>三、設計階段履約主時程</h2></div><div class="bd"><div class="scroll"><table class="tbl" id="scheduleTable"><thead><tr><th>階段</th><th>成果 / 工作</th><th>起算基準</th><th>契約日數</th><th>契約期限</th><th>實際提送日</th><th>實際 / 預估核定日</th><th>狀態</th><th>說明</th></tr></thead><tbody></tbody></table></div></div></section>
+<section class="card"><div class="hd"><h2>四、付款預測與年度資金需求</h2></div><div class="bd"><div class="scroll"><table class="tbl" id="paymentTable"><thead><tr><th>類別</th><th>付款條件</th><th>比例</th><th>條件達成日</th><th>預估付款日</th><th>預估金額</th><th>設計累計</th><th>年度</th><th>備註</th></tr></thead><tbody></tbody></table></div></div></section>
+<section class="card half"><div class="hd"><h2>五、年度資金需求彙整</h2></div><div class="bd"><table class="summary-table" id="yearSummary"><thead><tr><th>年度</th><th class="right">預估付款</th><th class="right">筆數</th></tr></thead><tbody></tbody></table></div></section>
+<section class="card half"><div class="hd"><h2>六、施工監造付款模擬</h2></div><div class="bd"><div class="formgrid" style="grid-template-columns:repeat(2,1fr)"><div class="field"><label>監造人員進駐 / 起始款條件日</label><input type="date" id="supervisionStart"></div><div class="field"><label>施工開始日</label><input type="date" id="constructionStart"></div><div class="field"><label>施工完成日</label><input type="date" id="constructionEnd"></div><div class="field"><label>驗收結算完成日</label><input type="date" id="constructionClose"></div></div><div class="scroll" style="margin-top:12px"><table class="tbl" style="min-width:800px" id="supervisionTable"><thead><tr><th>期別</th><th>條件 / 期間</th><th>比例</th><th>條件日</th><th>預估付款日</th><th>金額</th><th>累計</th><th>備註</th></tr></thead><tbody></tbody></table></div></div></section>
+<section class="card"><div class="hd"><h2>七、網路公開與資料保存</h2></div><div class="bd"><div class="note">目前採「GitHub Pages + JSON」：所有人讀到 GitHub 上同一份基準資料；瀏覽器內的修改先存在本機。正式更新時，請匯出專案 JSON 後覆蓋 repository 的 <b>data/&lt;project&gt;.json</b>，GitHub commit 會自然留下歷程。若未來要多人直接在線編輯，再接 Supabase / Firebase 等後端資料庫。</div></div></section>
+</div></div><script src="app.js"></script></body></html>
+
 <div class="grid">
 <section class="card"><div class="hd"><h2>一、基準日與管制假設</h2></div><div class="bd"><div class="formgrid">
 <div class="field"><label>決標日</label><input type="date" id="awardDate"></div><div class="field"><label>評選日</label><input type="date" id="evaluationDate"></div><div class="field"><label>議價日</label><input type="date" id="negotiationDate"></div><div class="field"><label>簽約日</label><input type="date" id="signDate"></div>
