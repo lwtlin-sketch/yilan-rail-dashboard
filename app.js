@@ -34,3 +34,528 @@ window.importProjectJSON=function(){const i=document.createElement('input');i.ty
 window.exportExcel=function(){recalc();let tabs=[['履約主時程',$('scheduleTable')],['付款預測',$('paymentTable')],['年度資金需求',$('yearSummary')],['施工監造模擬',$('supervisionTable')]],html='<html><head><meta charset="utf-8"></head><body>';tabs.forEach(([n,t])=>html+='<h2>'+n+'</h2>'+t.outerHTML+'<br>');html+='</body></html>';let blob=new Blob(['\ufeff',html],{type:'application/vnd.ms-excel'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='宜蘭高架_'+current.name+'_履約付款管制_'+new Date().toISOString().slice(0,10)+'.xls';a.click()}
 window.toggleViewMode=function(force){let on=typeof force==='boolean'?force:!document.body.classList.contains('view-mode');document.body.classList.toggle('view-mode',on);let q=new URLSearchParams(location.search);on?q.set('view','1'):q.delete('view');history.replaceState(null,'',location.pathname+(q.toString()?'?'+q.toString():''))}
 window.switchProject=id=>loadProject(id);init().catch(e=>{document.body.innerHTML='<div style="padding:30px;font-family:sans-serif"><h2>無法載入資料</h2><p>此程式需透過 GitHub Pages 或本機 HTTP Server 執行，不能直接以 file:// 開啟。</p><pre>'+String(e)+'</pre></div>'});
+/* =========================================================
+   登入後首頁 / 管制總覽
+   ========================================================= */
+
+function dashboardToday(){
+  const d = new Date();
+  d.setHours(12,0,0,0);
+  return d;
+}
+
+function dayDiff(from,to){
+  if(!from || !to) return null;
+
+  const a = new Date(from);
+  const b = new Date(to);
+
+  a.setHours(12,0,0,0);
+  b.setHours(12,0,0,0);
+
+  return Math.ceil((b-a)/86400000);
+}
+
+function dashboardScheduleData(){
+
+  const pcm = Number($('pcmDays')?.value || 0);
+  const result = [];
+  const c = {};
+
+  for(const d of defs){
+
+    const base = baseDate(d,c);
+    const deadline = addDays(base,d.days);
+
+    const submit = actual(d.id,'submit');
+    const approvalActual = actual(d.id,'approval');
+
+    /*
+      這裡保留原系統的「預估核定日」邏輯，
+      但 Dashboard 的完成判定只採實際核定日。
+    */
+    const approvalForecast =
+      addDays(submit || deadline,pcm);
+
+    const approval =
+      approvalActual || approvalForecast;
+
+    c[d.id+'Deadline'] = deadline;
+    c[d.id+'Submit'] = submit || deadline;
+    c[d.id+'Approval'] = approval;
+
+    result.push({
+      ...d,
+      baseDate:base,
+      deadline,
+      submit,
+      approvalActual,
+      approvalForecast
+    });
+  }
+
+  return result;
+}
+
+function dashboardItemStatus(item){
+
+  const today = dashboardToday();
+
+  if(item.approvalActual){
+    return {
+      code:'completed',
+      text:'已完成',
+      className:'work-success',
+      days:null
+    };
+  }
+
+  if(item.submit && !item.approvalActual){
+    return {
+      code:'pending',
+      text:'待核定',
+      className:'work-pending',
+      days:null
+    };
+  }
+
+  if(!item.deadline){
+    return {
+      code:'waiting',
+      text:'待基準日',
+      className:'work-info',
+      days:null
+    };
+  }
+
+  const diff = dayDiff(today,item.deadline);
+
+  if(diff < 0){
+    return {
+      code:'overdue',
+      text:'逾期 '+Math.abs(diff)+' 日',
+      className:'work-danger',
+      days:diff
+    };
+  }
+
+  if(diff <= 14){
+    return {
+      code:'due14',
+      text:diff===0 ? '今日到期' : diff+' 日內到期',
+      className:'work-warning',
+      days:diff
+    };
+  }
+
+  if(diff <= 30){
+    return {
+      code:'due30',
+      text:diff+' 日內到期',
+      className:'work-info',
+      days:diff
+    };
+  }
+
+  return {
+    code:'normal',
+    text:'管制中',
+    className:'work-info',
+    days:diff
+  };
+}
+
+function dashboardMoneyNumber(text){
+
+  if(!text) return 0;
+
+  const cleaned =
+    String(text)
+      .replace(/[^\d.-]/g,'');
+
+  return Number(cleaned || 0);
+}
+
+function dashboardDateFromText(text){
+
+  if(!text) return null;
+
+  const m =
+    String(text)
+      .match(/(\d{4})[\/-](\d{2})[\/-](\d{2})/);
+
+  if(!m) return null;
+
+  return parse(
+    m[1]+'-'+m[2]+'-'+m[3]
+  );
+}
+
+function getPaymentDashboardData(){
+
+  const table = $('paymentTable');
+
+  if(!table){
+    return {
+      readyCount:0,
+      readyAmount:0,
+      pendingAmount:0,
+      nextPay:null
+    };
+  }
+
+  const today = dashboardToday();
+
+  let readyCount = 0;
+  let readyAmount = 0;
+  let pendingAmount = 0;
+  let nextPay = null;
+
+  const trs =
+    table.querySelectorAll('tbody tr');
+
+  trs.forEach(tr=>{
+
+    const td = tr.querySelectorAll('td');
+
+    /*
+      paymentTable 欄位：
+      0 類別
+      1 付款條件
+      2 比例
+      3 條件達成日
+      4 預估付款日
+      5 預估金額
+    */
+
+    if(td.length < 6) return;
+
+    const trigger =
+      dashboardDateFromText(td[3].textContent);
+
+    const pay =
+      dashboardDateFromText(td[4].textContent);
+
+    const amount =
+      dashboardMoneyNumber(td[5].textContent);
+
+    if(trigger && trigger <= today){
+
+      readyCount++;
+      readyAmount += amount;
+
+    }else{
+
+      pendingAmount += amount;
+
+    }
+
+    if(pay && pay >= today){
+
+      if(!nextPay || pay < nextPay){
+        nextPay = pay;
+      }
+
+    }
+
+  });
+
+  return {
+    readyCount,
+    readyAmount,
+    pendingAmount,
+    nextPay
+  };
+}
+
+function renderDashboard(){
+
+  if(!$('overview')) return;
+
+  const today = dashboardToday();
+  const items = dashboardScheduleData();
+
+  $('overviewToday').textContent =
+    fmt(today);
+
+  $('ovProject').textContent =
+    current?.name || '-';
+
+  $('ovSignDate').textContent =
+    $('signDate')?.value
+      ? $('signDate').value.replaceAll('-','/')
+      : '-';
+
+  let overdue = 0;
+  let due14 = 0;
+  let due30 = 0;
+  let pending = 0;
+  let completed = 0;
+
+  const important = [];
+
+  items.forEach(item=>{
+
+    const st = dashboardItemStatus(item);
+
+    if(st.code==='overdue'){
+      overdue++;
+      important.push({item,st,sort:-10000+(st.days||0)});
+    }
+
+    if(st.code==='due14'){
+      due14++;
+      important.push({item,st,sort:st.days});
+    }
+
+    if(st.code==='due30'){
+      due30++;
+      important.push({item,st,sort:st.days});
+    }
+
+    if(st.code==='pending'){
+      pending++;
+      important.push({item,st,sort:-500});
+    }
+
+    if(st.code==='completed'){
+      completed++;
+    }
+
+  });
+
+  $('ovOverdue').textContent = overdue;
+  $('ovDue14').textContent = due14;
+  $('ovDue30').textContent = due30;
+  $('ovPendingApproval').textContent = pending;
+  $('ovCompleted').textContent = completed;
+
+  /*
+    注意：
+    14日內到期是 0~14日；
+    30日內到期是 15~30日，
+    不重複計算。
+  */
+
+  let overallText = '正常管制';
+
+  if(overdue > 0){
+    overallText = '有逾期事項';
+  }else if(due14 > 0){
+    overallText = '有近期到期事項';
+  }else if(pending > 0){
+    overallText = '有成果待核定';
+  }
+
+  $('ovOverallStatus').textContent =
+    overallText;
+
+  /* 完成度 */
+
+  const total = items.length;
+
+  const percent =
+    total
+      ? Math.round(completed / total * 100)
+      : 0;
+
+  $('ovProgress').textContent =
+    percent+'%';
+
+  $('ovProgressText').textContent =
+    completed+' / '+total;
+
+  $('ovProgressBar').style.width =
+    percent+'%';
+
+  /*
+    近期重要工作排序
+  */
+
+  important.sort((a,b)=>a.sort-b.sort);
+
+  const topItems =
+    important.slice(0,8);
+
+  $('ovImportantWorks').innerHTML =
+    topItems.length
+      ? topItems.map(({item,st})=>{
+
+          let sub = '';
+
+          if(item.submit){
+            sub +=
+              '已提送 '+fmt(item.submit);
+          }else{
+            sub +=
+              '尚未登錄提送日';
+          }
+
+          if(item.approvalActual){
+            sub +=
+              '｜核定 '+fmt(item.approvalActual);
+          }
+
+          return `
+            <div class="work-item ${st.className}">
+              <div class="work-status">
+                ${st.text}
+              </div>
+
+              <div class="work-name">
+                <b>${item.name}</b>
+                <span>${sub}</span>
+              </div>
+
+              <div class="work-date">
+                契約期限<br>
+                <b>${fmt(item.deadline)||'-'}</b>
+              </div>
+            </div>
+          `;
+
+        }).join('')
+      : `
+        <div class="overview-empty">
+          目前無逾期、待核定或30日內到期事項
+        </div>
+      `;
+
+  /*
+    階段摘要
+  */
+
+  const stages = {};
+
+  items.forEach(item=>{
+
+    if(!stages[item.stage]){
+      stages[item.stage] = {
+        total:0,
+        done:0
+      };
+    }
+
+    stages[item.stage].total++;
+
+    if(item.approvalActual){
+      stages[item.stage].done++;
+    }
+
+  });
+
+  $('ovStageList').innerHTML =
+    Object.entries(stages)
+      .map(([stage,v])=>{
+
+        const p =
+          v.total
+            ? Math.round(v.done/v.total*100)
+            : 0;
+
+        return `
+          <div class="stage-item">
+            <span>${stage}</span>
+            <b>${v.done}/${v.total}（${p}%）</b>
+          </div>
+        `;
+
+      }).join('');
+
+  /*
+    付款摘要
+  */
+
+  const pay =
+    getPaymentDashboardData();
+
+  $('ovPayReadyCount').textContent =
+    pay.readyCount+' 項';
+
+  $('ovPayReadyAmount').textContent =
+    money(pay.readyAmount)+' 元';
+
+  $('ovPayPendingAmount').textContent =
+    money(pay.pendingAmount)+' 元';
+
+  $('ovNextPayDate').textContent =
+    pay.nextPay
+      ? fmt(pay.nextPay)
+      : '-';
+}
+
+function scrollToSchedule(){
+
+  const el =
+    $('scheduleTable');
+
+  if(el){
+    el.scrollIntoView({
+      behavior:'smooth',
+      block:'start'
+    });
+  }
+
+}
+
+function scrollToPayment(){
+
+  const el =
+    $('paymentTable');
+
+  if(el){
+    el.scrollIntoView({
+      behavior:'smooth',
+      block:'start'
+    });
+  }
+
+}
+
+/*
+  將 Dashboard 掛到既有 recalc()
+  不修改原 recalc 的內容，
+  降低影響既有系統的風險。
+*/
+
+if(typeof recalc === 'function'){
+
+  const originalRecalc = recalc;
+
+  recalc = function(){
+
+    const result =
+      originalRecalc.apply(
+        this,
+        arguments
+      );
+
+    try{
+      renderDashboard();
+    }catch(err){
+      console.error(
+        'Dashboard render error:',
+        err
+      );
+    }
+
+    return result;
+  };
+
+}
+
+/*
+  若頁面初始化後資料已存在，
+  再補跑一次 Dashboard。
+*/
+
+window.addEventListener(
+  'load',
+  ()=>{
+    setTimeout(()=>{
+      try{
+        renderDashboard();
+      }catch(e){}
+    },300);
+  }
+);
