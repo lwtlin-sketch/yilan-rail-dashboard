@@ -4,8 +4,6 @@
 
 ## GitHub Pages 建議網址
 
-- 南段：`https://lwtlin-sketch.github.io/yilan-rail-dashboard/?project=south`
-- 北段：`https://lwtlin-sketch.github.io/yilan-rail-dashboard/?project=north`
 - 公開唯讀：在網址後加 `&view=1`
 
 ## 檔案結構
