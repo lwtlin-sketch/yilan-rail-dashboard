@@ -9,556 +9,457 @@ const defs=[
 {id:'utilityResult',stage:'調查',name:'管線調查成果報告',base:'utilityPlanApproval',days:120,pcm:true,basis:'工作計畫核定後120日內'},
 {id:'basic',stage:'設計',name:'基本設計成果初稿',base:'execPlanApproval',days:150,pcm:true,basis:'執行服務計畫書核定後150日內'},
 {id:'final',stage:'設計',name:'期末設計成果初稿',base:'finalBase',days:300,pcm:true,basis:'基本設計核定後（或通知日起）300日內'}];
-function parse(s){if(!s)return null;const d=new Date(s+'T12:00:00');return isNaN(d)?null:d}function iso(d){return d?d.toISOString().slice(0,10):''}function fmt(d){return d?iso(d).replaceAll('-','/'):''}function addDays(d,n){if(!d)return null;let x=new Date(d);x.setDate(x.getDate()+Number(n||0));return x}function money(n){return Number(n||0).toLocaleString('zh-TW',{maximumFractionDigits:0})}function pct(n){return (Math.round(n*100)/100).toFixed(2)+'%'}
-function holidays(){return new Set(($('holidays').value||'').split(/[\s,;]+/).filter(Boolean))}function addWorkdays(d,n){if(!d)return null;let x=new Date(d),c=0,h=holidays();while(c<Number(n||0)){x.setDate(x.getDate()+1);let day=x.getDay(),s=iso(x);if(day!==0&&day!==6&&!h.has(s))c++;}return x}
+
+function parse(s){
+  if(!s)return null;
+  const d=new Date(s+'T12:00:00');
+  return isNaN(d)?null:d;
+}
+function iso(d){return d?d.toISOString().slice(0,10):''}
+function fmt(d){return d?iso(d).replaceAll('-','/'):''}
+function addDays(d,n){
+  if(!d)return null;
+  let x=new Date(d);
+  x.setDate(x.getDate()+Number(n||0));
+  return x;
+}
+function money(n){return Number(n||0).toLocaleString('zh-TW',{maximumFractionDigits:0})}
+function pct(n){return (Math.round(n*100)/100).toFixed(2)+'%'}
+function holidays(){return new Set(($('holidays').value||'').split(/[\s,;]+/).filter(Boolean))}
+function addWorkdays(d,n){
+  if(!d)return null;
+  let x=new Date(d),c=0,h=holidays();
+  while(c<Number(n||0)){
+    x.setDate(x.getDate()+1);
+    let day=x.getDay(),s=iso(x);
+    if(day!==0&&day!==6&&!h.has(s))c++;
+  }
+  return x;
+}
 function localKey(){return 'yilan-dashboard-'+current.id}
-async function init(){catalog=await fetch('projects.json',{cache:'no-store'}).then(r=>r.json());$('projectSelect').innerHTML=catalog.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');$('segmentButtons').innerHTML=catalog.projects.map(p=>`<button class="segment-btn" data-project="${p.id}" onclick="switchProject('${p.id}')">${p.name}</button>`).join('');const q=new URLSearchParams(location.search);const last=localStorage.getItem('yilan-dashboard-last-project');await loadProject(last||catalog.defaultProject);if(q.get('view')==='1')toggleViewMode(true)}
-async function loadProject(id){const p=catalog.projects.find(x=>x.id===id)||catalog.projects[0];current=await fetch(p.data,{cache:'no-store'}).then(r=>r.json());const local=localStorage.getItem(localKey());if(local){try{current=JSON.parse(local)}catch(e){}}rows={...(current.rows||{})};$('projectSelect').value=current.id;localStorage.setItem('yilan-dashboard-last-project',current.id);document.querySelectorAll('.segment-btn').forEach(b=>b.classList.toggle('active',b.dataset.project===current.id));hydrate();recalc()}
-function hydrate(){ $('heroSub').textContent=current.title; $('heroTitle').textContent='宜蘭至羅東鐵路高架化計畫｜'+current.name+'履約＋付款管制'; const m=current.milestones||{};$('awardDate').value=m.awardDate||'';$('evaluationDate').value=m.evaluationDate||'';$('negotiationDate').value=m.negotiationDate||'';$('signDate').value=m.signDate||'';$('pcmDays').value=current.settings?.pcmDays??30;$('payMode').value=String(current.settings?.payWorkdays??30);$('forecastMode').value=current.settings?.forecastMode||'budget';$('holidays').value=(current.settings?.holidays||[]).join(', ');for(const k of ['noticeDate','pccDate','tenderApprovalDate','allWorksAwardDate','allWorksCloseDate','supervisionStart','constructionStart','constructionEnd','constructionClose'])$(k).value=current.dates?.[k]||'';renderBadges();renderBudget()}
-function renderBadges(){const m=current.milestones||{};let a=[];if(m.awardDate)a.push('決標 '+m.awardDate.replaceAll('-','/'));if(m.evaluationDate)a.push('評選 '+m.evaluationDate.replaceAll('-','/'));if(m.negotiationDate)a.push('議價 '+m.negotiationDate.replaceAll('-','/'));if(m.signDate)a.push('簽約 '+m.signDate.replaceAll('-','/'));$('badges').innerHTML=a.map(x=>`<span class="badge">${x}</span>`).join('')+`<span class="badge">共用程式 / JSON資料</span>`}
-function renderBudget(){const labels={survey:['補充測量','實作數量結算'],geo:['補充地質調查','實作數量結算'],utility:['管線調查','實作數量結算'],land:['用地及地上物相關作業','依契約/實作'],design:['工程設計','付款里程碑'],supervision:['施工監造','進駐款＋工程進度估驗']};$('budgetNote').innerHTML=`${current.name}預算總額 <b>${money(current.budget.total)} 元</b>；發包技術服務費 <b>${money(current.budget.serviceTotal)} 元</b>。${current.notes||''}`;$('budgetTable').querySelector('tbody').innerHTML=Object.entries(labels).map(([k,v])=>`<tr><td>${v[0]}</td><td class="num">${money(current.budget[k])}</td><td><input class="contractAmt" data-key="${k}" type="number" value="${current.contract?.[k]??current.budget[k]}"></td><td class="num usedAmt" data-key="${k}"></td><td>${v[1]}</td></tr>`).join('')}
-function used(k){return $('forecastMode').value==='budget'?Number(current.budget[k]||0):Number(document.querySelector(`.contractAmt[data-key="${k}"]`)?.value||0)}
-function actualField(id,kind){const key=id+'_'+kind;return `<input type="date" value="${rows[key]||''}" onchange="rows['${key}']=this.value;recalc()">`}function actual(id,k){return parse(rows[id+'_'+k]||'')}function eventDate(id,k,fallback){return actual(id,k)||fallback}
-function baseDate(def,c){if(def.base==='sign')return parse($('signDate').value);if(def.base==='execPlanApproval')return c.execPlanApproval;if(def.base==='surveyPlanApproval')return c.surveyPlanApproval;if(def.base==='geoPlanApproval')return c.geoPlanApproval;if(def.base==='utilityPlanApproval')return c.utilityPlanApproval;if(def.base==='finalBase')return parse($('noticeDate').value)||c.basicApproval;return null}
-function status(deadline,act){if(!deadline)return '<span class="pill p-orange">待基準日</span>';if(act)return act<=deadline?'<span class="pill p-green">已提送 / 未逾期</span>':'<span class="pill p-red">實際逾期</span>';let t=new Date();t.setHours(12,0,0,0);if(t>deadline)return '<span class="pill p-red">已逾期未登錄</span>';let diff=Math.ceil((deadline-t)/86400000);return diff<=14?`<span class="pill p-orange">${diff}日內到期</span>`:'<span class="pill p-blue">管制中</span>'}
-function computeSchedule(){let c={},pcm=Number($('pcmDays').value||0),html='';for(const d of defs){let b=baseDate(d,c),deadline=addDays(b,d.days),act=actual(d.id,'submit'),approvalFallback=addDays(act||deadline,pcm),approval=eventDate(d.id,'approval',approvalFallback);c[d.id+'Deadline']=deadline;c[d.id+'Submit']=act||deadline;c[d.id+'Approval']=approval;let baseName=d.base==='sign'?'簽約日':d.base==='execPlanApproval'?'執行服務計畫核定日':d.base==='surveyPlanApproval'?'測量工作計畫核定日':d.base==='geoPlanApproval'?'地質工作計畫核定日':d.base==='utilityPlanApproval'?'管線工作計畫核定日':'基本設計核定日 / 甲方通知日';html+=`<tr><td class="center"><span class="pill p-blue">${d.stage}</span></td><td>${d.name}</td><td>${baseName}<br><span class="small">${fmt(b)}</span></td><td class="center">${d.days}日</td><td class="center"><b>${fmt(deadline)||'-'}</b></td><td>${actualField(d.id,'submit')}</td><td>${actualField(d.id,'approval')}<div class="small">預估：${fmt(approvalFallback)||'-'}</div></td><td class="center">${status(deadline,act)}</td><td>${d.basis}<br><span class="small">未填核定日：以提送/期限＋PCM管理預估${pcm}日</span></td></tr>`} $('scheduleTable').querySelector('tbody').innerHTML=html;return c}
-function payDate(d){return addWorkdays(d,Number($('payMode').value||0))}
-function computePayments(c){const design=used('design'),pay=[];let cum=0;const add=(cat,name,ratio,trigger,note,isDesign=false)=>{if(isDesign)cum+=ratio;let base=cat==='工程設計'?design:cat==='補充測量'?used('survey'):cat==='補充地質'?used('geo'):cat==='管線調查'?used('utility'):0;pay.push({cat,name,ratio,trigger,pay:payDate(trigger),amt:base*ratio/100,cum:isDesign?cum:null,note})};add('工程設計','契約簽訂',10,parse($('signDate').value),'簽約完成',true);add('補充測量','工作計畫書經甲方同意',10,c.surveyPlanApproval,'先付10%');add('補充地質','工作計畫書經甲方同意',10,c.geoPlanApproval,'先付10%');add('管線調查','工作計畫書經甲方同意',10,c.utilityPlanApproval,'先付10%');add('工程設計','執行服務計畫書經甲方同意',10,c.execPlanApproval,'設計累計20%',true);add('補充測量','正式成果核可／實作結算',90,c.surveyResultApproval,'現金流以餘90%上限估算；實際依實作');add('補充地質','正式成果核可／實作結算',90,c.geoResultApproval,'現金流以餘90%上限估算；實際依實作');add('管線調查','正式成果核可／實作結算',90,c.utilityResultApproval,'現金流以餘90%上限估算；實際依實作');add('工程設計','基本設計成果審查核可',20,c.basicApproval,'設計累計40%',true);add('工程設計','計畫經費審議經工程會核定',5,parse($('pccDate').value),'日期未填則不列年度',true);add('工程設計','期末設計成果審查核可',40,c.finalApproval,'設計累計85%',true);add('工程設計','招標文件成果審查核可',5,parse($('tenderApprovalDate').value),'設計累計90%',true);add('工程設計','各分標工程決標完成',5,parse($('allWorksAwardDate').value),'依各標工程預算比例支付',true);add('工程設計','全部工程竣工驗收、結算且無待解決事項',5,parse($('allWorksCloseDate').value),'設計累計100%',true);let years={};$('paymentTable').querySelector('tbody').innerHTML=pay.map(x=>{let y=x.pay?x.pay.getFullYear():'';if(y){years[y]??={amt:0,count:0};years[y].amt+=x.amt;years[y].count++}return `<tr><td class="center">${x.cat}</td><td>${x.name}</td><td class="center">${pct(x.ratio)}</td><td class="center">${fmt(x.trigger)||'-'}</td><td class="center"><b>${fmt(x.pay)||'-'}</b></td><td class="num">${money(x.amt)}</td><td class="center">${x.cum!==null?pct(x.cum):'-'}</td><td class="center">${y||'-'}</td><td>${x.note}</td></tr>`}).join('');let ys=Object.keys(years).sort();$('yearSummary').querySelector('tbody').innerHTML=ys.length?ys.map(y=>`<tr><td>${y}（民國${Number(y)-1911}年）</td><td class="right"><b>${money(years[y].amt)}</b></td><td class="right">${years[y].count}</td></tr>`).join(''):'<tr><td colspan="3" class="small">目前沒有可推估付款日之資料</td></tr>'}
-function computeSupervision(){let total=used('supervision'),start=parse($('supervisionStart').value),cs=parse($('constructionStart').value),ce=parse($('constructionEnd').value),close=parse($('constructionClose').value),arr=[],cum=0;if(start){cum=5;arr.push({n:'進駐款',period:'監造計畫核定＋人員進駐',ratio:5,trigger:start,cum,note:'契約固定條件'})}if(cs&&ce&&ce>cs){let pts=[],cur=new Date(cs);while(cur<ce){let n=new Date(cur);n.setMonth(n.getMonth()+2);if(n>ce)n=new Date(ce);pts.push(n);cur=n}let r=93/pts.length;pts.forEach((d,i)=>{cum+=r;arr.push({n:'估驗'+(i+1),period:'每2個月線性模擬',ratio:r,trigger:d,cum,note:'管理模擬；實際依施工進度'})})}if(close)arr.push({n:'尾款',period:'竣工驗收＋結算＋無待解決事項',ratio:2,trigger:close,cum:100,note:'契約尾款2%'});$('supervisionTable').querySelector('tbody').innerHTML=arr.length?arr.map(x=>`<tr><td class="center">${x.n}</td><td>${x.period}</td><td class="center">${pct(x.ratio)}</td><td class="center">${fmt(x.trigger)}</td><td class="center"><b>${fmt(payDate(x.trigger))}</b></td><td class="num">${money(total*x.ratio/100)}</td><td class="center">${pct(x.cum)}</td><td>${x.note}</td></tr>`).join(''):'<tr><td colspan="8" class="small">尚未輸入監造進駐 / 施工期程。</td></tr>'}
-function updateUsed(){document.querySelectorAll('.usedAmt').forEach(td=>td.textContent=money(used(td.dataset.key)))}
-window.recalc=function(){updateUsed();const c=computeSchedule();computePayments(c);computeSupervision()}
-function collect(){current.milestones={awardDate:$('awardDate').value,evaluationDate:$('evaluationDate').value,negotiationDate:$('negotiationDate').value,signDate:$('signDate').value};current.settings={pcmDays:Number($('pcmDays').value||30),payWorkdays:Number($('payMode').value||30),forecastMode:$('forecastMode').value,holidays:($('holidays').value||'').split(/[\s,;]+/).filter(Boolean)};current.dates={};for(const k of ['noticeDate','pccDate','tenderApprovalDate','allWorksAwardDate','allWorksCloseDate','supervisionStart','constructionStart','constructionEnd','constructionClose'])current.dates[k]=$(k).value;current.contract={...current.contract};document.querySelectorAll('.contractAmt').forEach(e=>current.contract[e.dataset.key]=Number(e.value||0));current.rows={...rows};return current}
-window.saveLocal=function(){localStorage.setItem(localKey(),JSON.stringify(collect()));alert('已儲存在此瀏覽器。')};window.resetLocal=function(){if(confirm('確定放棄本機修改並重新讀取 GitHub JSON？')){localStorage.removeItem(localKey());location.reload()}}
-window.exportProjectJSON=function(){const blob=new Blob([JSON.stringify(collect(),null,2)],{type:'application/json;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=current.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-window.importProjectJSON=function(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=()=>{const f=i.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{current=JSON.parse(r.result);rows={...(current.rows||{})};hydrate();recalc();saveLocal()}catch(e){alert('JSON 格式錯誤')}};r.readAsText(f,'utf-8')};i.click()}
-window.exportExcel=function(){recalc();let tabs=[['履約主時程',$('scheduleTable')],['付款預測',$('paymentTable')],['年度資金需求',$('yearSummary')],['施工監造模擬',$('supervisionTable')]],html='<html><head><meta charset="utf-8"></head><body>';tabs.forEach(([n,t])=>html+='<h2>'+n+'</h2>'+t.outerHTML+'<br>');html+='</body></html>';let blob=new Blob(['\ufeff',html],{type:'application/vnd.ms-excel'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='宜蘭高架_'+current.name+'_履約付款管制_'+new Date().toISOString().slice(0,10)+'.xls';a.click()}
-window.toggleViewMode=function(force){let on=typeof force==='boolean'?force:!document.body.classList.contains('view-mode');document.body.classList.toggle('view-mode',on);let q=new URLSearchParams(location.search);on?q.set('view','1'):q.delete('view');history.replaceState(null,'',location.pathname+(q.toString()?'?'+q.toString():''))}
-window.switchProject=id=>loadProject(id);init().catch(e=>{document.body.innerHTML='<div style="padding:30px;font-family:sans-serif"><h2>無法載入資料</h2><p>此程式需透過 GitHub Pages 或本機 HTTP Server 執行，不能直接以 file:// 開啟。</p><pre>'+String(e)+'</pre></div>'});
-/* =========================================================
-   登入後首頁 / 管制總覽
-   ========================================================= */
 
-function dashboardToday(){
-  const d = new Date();
-  d.setHours(12,0,0,0);
-  return d;
+async function init(){
+  catalog=await fetch('projects.json',{cache:'no-store'}).then(r=>r.json());
+  $('projectSelect').innerHTML=catalog.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  $('segmentButtons').innerHTML=catalog.projects.map(p=>`<button class="segment-btn" data-project="${p.id}" onclick="switchProject('${p.id}')">${p.name}</button>`).join('');
+  const q=new URLSearchParams(location.search);
+  const last=localStorage.getItem('yilan-dashboard-last-project');
+  await loadProject(last||catalog.defaultProject);
+  if(q.get('view')==='1')toggleViewMode(true);
 }
 
-function dayDiff(from,to){
-  if(!from || !to) return null;
-
-  const a = new Date(from);
-  const b = new Date(to);
-
-  a.setHours(12,0,0,0);
-  b.setHours(12,0,0,0);
-
-  return Math.ceil((b-a)/86400000);
+async function loadProject(id){
+  const p=catalog.projects.find(x=>x.id===id)||catalog.projects[0];
+  current=await fetch(p.data,{cache:'no-store'}).then(r=>r.json());
+  const local=localStorage.getItem(localKey());
+  if(local){
+    try{current=JSON.parse(local)}catch(e){}
+  }
+  rows={...(current.rows||{})};
+  $('projectSelect').value=current.id;
+  localStorage.setItem('yilan-dashboard-last-project',current.id);
+  document.querySelectorAll('.segment-btn').forEach(b=>b.classList.toggle('active',b.dataset.project===current.id));
+  hydrate();
+  recalc();
 }
 
-function dashboardScheduleData(){
+function hydrate(){
+  $('heroSub').textContent=current.title;
+  $('heroTitle').textContent='宜蘭至羅東鐵路高架化計畫｜'+current.name+'履約＋付款管制';
+  const m=current.milestones||{};
+  $('awardDate').value=m.awardDate||'';
+  $('evaluationDate').value=m.evaluationDate||'';
+  $('negotiationDate').value=m.negotiationDate||'';
+  $('signDate').value=m.signDate||'';
+  $('pcmDays').value=current.settings?.pcmDays??30;
+  $('payMode').value=String(current.settings?.payWorkdays??30);
+  $('forecastMode').value=current.settings?.forecastMode||'budget';
+  $('holidays').value=(current.settings?.holidays||[]).join(', ');
+  for(const k of ['noticeDate','pccDate','tenderApprovalDate','allWorksAwardDate','allWorksCloseDate','supervisionStart','constructionStart','constructionEnd','constructionClose'])$(k).value=current.dates?.[k]||'';
+  renderBadges();
+  renderBudget();
+}
 
-  const pcm = Number($('pcmDays')?.value || 0);
-  const result = [];
-  const c = {};
+function renderBadges(){
+  const m=current.milestones||{};
+  let a=[];
+  if(m.awardDate)a.push('決標 '+m.awardDate.replaceAll('-','/'));
+  if(m.evaluationDate)a.push('評選 '+m.evaluationDate.replaceAll('-','/'));
+  if(m.negotiationDate)a.push('議價 '+m.negotiationDate.replaceAll('-','/'));
+  if(m.signDate)a.push('簽約 '+m.signDate.replaceAll('-','/'));
+  $('badges').innerHTML=a.map(x=>`<span class="badge">${x}</span>`).join('')+`<span class="badge">共用程式 / JSON資料</span>`;
+}
 
+function renderBudget(){
+  const labels={
+    survey:['補充測量','實作數量結算'],
+    geo:['補充地質調查','實作數量結算'],
+    utility:['管線調查','實作數量結算'],
+    land:['用地及地上物相關作業','依契約/實作'],
+    design:['工程設計','付款里程碑'],
+    supervision:['施工監造','進駐款＋工程進度估驗']
+  };
+  $('budgetNote').innerHTML=`${current.name}預算總額 <b>${money(current.budget.total)} 元</b>；發包技術服務費 <b>${money(current.budget.serviceTotal)} 元</b>。${current.notes||''}`;
+  $('budgetTable').querySelector('tbody').innerHTML=Object.entries(labels).map(([k,v])=>`<tr><td>${v[0]}</td><td class="num">${money(current.budget[k])}</td><td><input class="contractAmt" data-key="${k}" type="number" value="${current.contract?.[k]??current.budget[k]}"></td><td class="num usedAmt" data-key="${k}"></td><td>${v[1]}</td></tr>`).join('');
+}
+
+function used(k){
+  return $('forecastMode').value==='budget'
+    ?Number(current.budget[k]||0)
+    :Number(document.querySelector(`.contractAmt[data-key="${k}"]`)?.value||0);
+}
+
+function actualField(id,kind){
+  const key=id+'_'+kind;
+  return `<input type="date" value="${rows[key]||''}" onchange="rows['${key}']=this.value;recalc()">`;
+}
+function actual(id,k){return parse(rows[id+'_'+k]||'')}
+function eventDate(id,k,fallback){return actual(id,k)||fallback}
+
+function baseDate(def,c){
+  if(def.base==='sign')return parse($('signDate').value);
+  if(def.base==='execPlanApproval')return c.execPlanApproval;
+  if(def.base==='surveyPlanApproval')return c.surveyPlanApproval;
+  if(def.base==='geoPlanApproval')return c.geoPlanApproval;
+  if(def.base==='utilityPlanApproval')return c.utilityPlanApproval;
+  if(def.base==='finalBase')return parse($('noticeDate').value)||c.basicApproval;
+  return null;
+}
+
+function status(deadline,act){
+  if(!deadline)return '<span class="pill p-orange">待基準日</span>';
+  if(act)return act<=deadline
+    ?'<span class="pill p-green">已提送 / 未逾期</span>'
+    :'<span class="pill p-red">實際逾期</span>';
+  let t=new Date();
+  t.setHours(12,0,0,0);
+  if(t>deadline)return '<span class="pill p-red">已逾期未登錄</span>';
+  let diff=Math.ceil((deadline-t)/86400000);
+  return diff<=14
+    ?`<span class="pill p-orange">${diff}日內到期</span>`
+    :'<span class="pill p-blue">管制中</span>';
+}
+
+function computeSchedule(){
+  let c={},pcm=Number($('pcmDays').value||0),html='';
   for(const d of defs){
+    let b=baseDate(d,c),
+        deadline=addDays(b,d.days),
+        act=actual(d.id,'submit'),
+        approvalFallback=addDays(act||deadline,pcm),
+        approval=eventDate(d.id,'approval',approvalFallback);
 
-    const base = baseDate(d,c);
-    const deadline = addDays(base,d.days);
+    c[d.id+'Deadline']=deadline;
+    c[d.id+'Submit']=act||deadline;
+    c[d.id+'Approval']=approval;
 
-    const submit = actual(d.id,'submit');
-    const approvalActual = actual(d.id,'approval');
+    let baseName=
+      d.base==='sign'?'簽約日':
+      d.base==='execPlanApproval'?'執行服務計畫核定日':
+      d.base==='surveyPlanApproval'?'測量工作計畫核定日':
+      d.base==='geoPlanApproval'?'地質工作計畫核定日':
+      d.base==='utilityPlanApproval'?'管線工作計畫核定日':
+      '基本設計核定日 / 甲方通知日';
 
-    /*
-      這裡保留原系統的「預估核定日」邏輯，
-      但 Dashboard 的完成判定只採實際核定日。
-    */
-    const approvalForecast =
-      addDays(submit || deadline,pcm);
+    html+=`<tr>
+      <td class="center"><span class="pill p-blue">${d.stage}</span></td>
+      <td>${d.name}</td>
+      <td>${baseName}<br><span class="small">${fmt(b)}</span></td>
+      <td class="center">${d.days}日</td>
+      <td class="center"><b>${fmt(deadline)||'-'}</b></td>
+      <td>${actualField(d.id,'submit')}</td>
+      <td>${actualField(d.id,'approval')}<div class="small">預估：${fmt(approvalFallback)||'-'}</div></td>
+      <td class="center">${status(deadline,act)}</td>
+      <td>${d.basis}<br><span class="small">未填核定日：以提送/期限＋PCM管理預估${pcm}日</span></td>
+    </tr>`;
+  }
+  $('scheduleTable').querySelector('tbody').innerHTML=html;
+  return c;
+}
 
-    const approval =
-      approvalActual || approvalForecast;
+function payDate(d){return addWorkdays(d,Number($('payMode').value||0))}
 
-    c[d.id+'Deadline'] = deadline;
-    c[d.id+'Submit'] = submit || deadline;
-    c[d.id+'Approval'] = approval;
+function computePayments(c){
+  const design=used('design'),pay=[];
+  let cum=0;
 
-    result.push({
-      ...d,
-      baseDate:base,
-      deadline,
-      submit,
-      approvalActual,
-      approvalForecast
+  const add=(cat,name,ratio,trigger,note,isDesign=false)=>{
+    if(isDesign)cum+=ratio;
+    let base=
+      cat==='工程設計'?design:
+      cat==='補充測量'?used('survey'):
+      cat==='補充地質'?used('geo'):
+      cat==='管線調查'?used('utility'):0;
+    pay.push({
+      cat,
+      name,
+      ratio,
+      trigger,
+      pay:payDate(trigger),
+      amt:base*ratio/100,
+      cum:isDesign?cum:null,
+      note
+    });
+  };
+
+  add('工程設計','契約簽訂',10,parse($('signDate').value),'簽約完成',true);
+  add('補充測量','工作計畫書經甲方同意',10,c.surveyPlanApproval,'先付10%');
+  add('補充地質','工作計畫書經甲方同意',10,c.geoPlanApproval,'先付10%');
+  add('管線調查','工作計畫書經甲方同意',10,c.utilityPlanApproval,'先付10%');
+  add('工程設計','執行服務計畫書經甲方同意',10,c.execPlanApproval,'設計累計20%',true);
+  add('補充測量','正式成果核可／實作結算',90,c.surveyResultApproval,'現金流以餘90%上限估算；實際依實作');
+  add('補充地質','正式成果核可／實作結算',90,c.geoResultApproval,'現金流以餘90%上限估算；實際依實作');
+  add('管線調查','正式成果核可／實作結算',90,c.utilityResultApproval,'現金流以餘90%上限估算；實際依實作');
+  add('工程設計','基本設計成果審查核可',20,c.basicApproval,'設計累計40%',true);
+  add('工程設計','計畫經費審議經工程會核定',5,parse($('pccDate').value),'日期未填則不列年度',true);
+  add('工程設計','期末設計成果審查核可',40,c.finalApproval,'設計累計85%',true);
+  add('工程設計','招標文件成果審查核可',5,parse($('tenderApprovalDate').value),'設計累計90%',true);
+  add('工程設計','各分標工程決標完成',5,parse($('allWorksAwardDate').value),'依各標工程預算比例支付',true);
+  add('工程設計','全部工程竣工驗收、結算且無待解決事項',5,parse($('allWorksCloseDate').value),'設計累計100%',true);
+
+  let years={};
+
+  $('paymentTable').querySelector('tbody').innerHTML=pay.map(x=>{
+    let y=x.pay?x.pay.getFullYear():'';
+    if(y){
+      years[y]??={amt:0,count:0};
+      years[y].amt+=x.amt;
+      years[y].count++;
+    }
+    return `<tr>
+      <td class="center">${x.cat}</td>
+      <td>${x.name}</td>
+      <td class="center">${pct(x.ratio)}</td>
+      <td class="center">${fmt(x.trigger)||'-'}</td>
+      <td class="center"><b>${fmt(x.pay)||'-'}</b></td>
+      <td class="num">${money(x.amt)}</td>
+      <td class="center">${x.cum!==null?pct(x.cum):'-'}</td>
+      <td class="center">${y||'-'}</td>
+      <td>${x.note}</td>
+    </tr>`;
+  }).join('');
+
+  let ys=Object.keys(years).sort();
+
+  $('yearSummary').querySelector('tbody').innerHTML=ys.length
+    ?ys.map(y=>`<tr><td>${y}（民國${Number(y)-1911}年）</td><td class="right"><b>${money(years[y].amt)}</b></td><td class="right">${years[y].count}</td></tr>`).join('')
+    :'<tr><td colspan="3" class="small">目前沒有可推估付款日之資料</td></tr>';
+}
+
+function computeSupervision(){
+  let total=used('supervision'),
+      start=parse($('supervisionStart').value),
+      cs=parse($('constructionStart').value),
+      ce=parse($('constructionEnd').value),
+      close=parse($('constructionClose').value),
+      arr=[],
+      cum=0;
+
+  if(start){
+    cum=5;
+    arr.push({
+      n:'進駐款',
+      period:'監造計畫核定＋人員進駐',
+      ratio:5,
+      trigger:start,
+      cum,
+      note:'契約固定條件'
     });
   }
 
-  return result;
+  if(cs&&ce&&ce>cs){
+    let pts=[],cur=new Date(cs);
+    while(cur<ce){
+      let n=new Date(cur);
+      n.setMonth(n.getMonth()+2);
+      if(n>ce)n=new Date(ce);
+      pts.push(n);
+      cur=n;
+    }
+    let r=93/pts.length;
+    pts.forEach((d,i)=>{
+      cum+=r;
+      arr.push({
+        n:'估驗'+(i+1),
+        period:'每2個月線性模擬',
+        ratio:r,
+        trigger:d,
+        cum,
+        note:'管理模擬；實際依施工進度'
+      });
+    });
+  }
+
+  if(close){
+    arr.push({
+      n:'尾款',
+      period:'竣工驗收＋結算＋無待解決事項',
+      ratio:2,
+      trigger:close,
+      cum:100,
+      note:'契約尾款2%'
+    });
+  }
+
+  $('supervisionTable').querySelector('tbody').innerHTML=arr.length
+    ?arr.map(x=>`<tr>
+      <td class="center">${x.n}</td>
+      <td>${x.period}</td>
+      <td class="center">${pct(x.ratio)}</td>
+      <td class="center">${fmt(x.trigger)}</td>
+      <td class="center"><b>${fmt(payDate(x.trigger))}</b></td>
+      <td class="num">${money(total*x.ratio/100)}</td>
+      <td class="center">${pct(x.cum)}</td>
+      <td>${x.note}</td>
+    </tr>`).join('')
+    :'<tr><td colspan="8" class="small">尚未輸入監造進駐 / 施工期程。</td></tr>';
 }
 
-function dashboardItemStatus(item){
+function updateUsed(){
+  document.querySelectorAll('.usedAmt').forEach(td=>td.textContent=money(used(td.dataset.key)));
+}
 
-  const today = dashboardToday();
+window.recalc=function(){
+  updateUsed();
+  const c=computeSchedule();
+  computePayments(c);
+  computeSupervision();
+}
 
-  if(item.approvalActual){
-    return {
-      code:'completed',
-      text:'已完成',
-      className:'work-success',
-      days:null
-    };
-  }
-
-  if(item.submit && !item.approvalActual){
-    return {
-      code:'pending',
-      text:'待核定',
-      className:'work-pending',
-      days:null
-    };
-  }
-
-  if(!item.deadline){
-    return {
-      code:'waiting',
-      text:'待基準日',
-      className:'work-info',
-      days:null
-    };
-  }
-
-  const diff = dayDiff(today,item.deadline);
-
-  if(diff < 0){
-    return {
-      code:'overdue',
-      text:'逾期 '+Math.abs(diff)+' 日',
-      className:'work-danger',
-      days:diff
-    };
-  }
-
-  if(diff <= 14){
-    return {
-      code:'due14',
-      text:diff===0 ? '今日到期' : diff+' 日內到期',
-      className:'work-warning',
-      days:diff
-    };
-  }
-
-  if(diff <= 30){
-    return {
-      code:'due30',
-      text:diff+' 日內到期',
-      className:'work-info',
-      days:diff
-    };
-  }
-
-  return {
-    code:'normal',
-    text:'管制中',
-    className:'work-info',
-    days:diff
+function collect(){
+  current.milestones={
+    awardDate:$('awardDate').value,
+    evaluationDate:$('evaluationDate').value,
+    negotiationDate:$('negotiationDate').value,
+    signDate:$('signDate').value
   };
+
+  current.settings={
+    pcmDays:Number($('pcmDays').value||30),
+    payWorkdays:Number($('payMode').value||30),
+    forecastMode:$('forecastMode').value,
+    holidays:($('holidays').value||'').split(/[\s,;]+/).filter(Boolean)
+  };
+
+  current.dates={};
+
+  for(const k of ['noticeDate','pccDate','tenderApprovalDate','allWorksAwardDate','allWorksCloseDate','supervisionStart','constructionStart','constructionEnd','constructionClose']){
+    current.dates[k]=$(k).value;
+  }
+
+  current.contract={...current.contract};
+
+  document.querySelectorAll('.contractAmt').forEach(e=>{
+    current.contract[e.dataset.key]=Number(e.value||0);
+  });
+
+  current.rows={...rows};
+
+  return current;
 }
 
-function dashboardMoneyNumber(text){
-
-  if(!text) return 0;
-
-  const cleaned =
-    String(text)
-      .replace(/[^\d.-]/g,'');
-
-  return Number(cleaned || 0);
+window.saveLocal=function(){
+  localStorage.setItem(localKey(),JSON.stringify(collect()));
+  alert('已儲存在此瀏覽器。');
 }
 
-function dashboardDateFromText(text){
+window.resetLocal=function(){
+  if(confirm('確定放棄本機修改並重新讀取 GitHub JSON？')){
+    localStorage.removeItem(localKey());
+    location.reload();
+  }
+}
 
-  if(!text) return null;
+window.exportProjectJSON=function(){
+  const blob=new Blob(
+    [JSON.stringify(collect(),null,2)],
+    {type:'application/json;charset=utf-8'}
+  );
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=current.id+'.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
 
-  const m =
-    String(text)
-      .match(/(\d{4})[\/-](\d{2})[\/-](\d{2})/);
+window.importProjectJSON=function(){
+  const i=document.createElement('input');
+  i.type='file';
+  i.accept='.json';
+  i.onchange=()=>{
+    const f=i.files?.[0];
+    if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        current=JSON.parse(r.result);
+        rows={...(current.rows||{})};
+        hydrate();
+        recalc();
+        saveLocal();
+      }catch(e){
+        alert('JSON 格式錯誤');
+      }
+    };
+    r.readAsText(f,'utf-8');
+  };
+  i.click();
+}
 
-  if(!m) return null;
+window.exportExcel=function(){
+  recalc();
 
-  return parse(
-    m[1]+'-'+m[2]+'-'+m[3]
+  let tabs=[
+    ['履約主時程',$('scheduleTable')],
+    ['付款預測',$('paymentTable')],
+    ['年度資金需求',$('yearSummary')],
+    ['施工監造模擬',$('supervisionTable')]
+  ];
+
+  let html='<html><head><meta charset="utf-8"></head><body>';
+
+  tabs.forEach(([n,t])=>{
+    html+='<h2>'+n+'</h2>'+t.outerHTML+'<br>';
+  });
+
+  html+='</body></html>';
+
+  let blob=new Blob(['\ufeff',html],{type:'application/vnd.ms-excel'});
+  let a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='宜蘭高架_'+current.name+'_履約付款管制_'+new Date().toISOString().slice(0,10)+'.xls';
+  a.click();
+}
+
+window.toggleViewMode=function(force){
+  let on=typeof force==='boolean'
+    ?force
+    :!document.body.classList.contains('view-mode');
+
+  document.body.classList.toggle('view-mode',on);
+
+  let q=new URLSearchParams(location.search);
+
+  on?q.set('view','1'):q.delete('view');
+
+  history.replaceState(
+    null,
+    '',
+    location.pathname+(q.toString()?'?'+q.toString():'')
   );
 }
 
-function getPaymentDashboardData(){
+window.switchProject=id=>loadProject(id);
+
+init().catch(e=>{
+  document.body.innerHTML=
+    '<div style="padding:30px;font-family:sans-serif">'+
+    '<h2>無法載入資料</h2>'+
+    '<p>此程式需透過 GitHub Pages 或本機 HTTP Server 執行，不能直接以 file:// 開啟。</p>'+
+    '<pre>'+String(e)+'</pre>'+
+    '</div>';
+});
 
-  const table = $('paymentTable');
-
-  if(!table){
-    return {
-      readyCount:0,
-      readyAmount:0,
-      pendingAmount:0,
-      nextPay:null
-    };
-  }
-
-  const today = dashboardToday();
-
-  let readyCount = 0;
-  let readyAmount = 0;
-  let pendingAmount = 0;
-  let nextPay = null;
-
-  const trs =
-    table.querySelectorAll('tbody tr');
-
-  trs.forEach(tr=>{
-
-    const td = tr.querySelectorAll('td');
-
-    /*
-      paymentTable 欄位：
-      0 類別
-      1 付款條件
-      2 比例
-      3 條件達成日
-      4 預估付款日
-      5 預估金額
-    */
-
-    if(td.length < 6) return;
-
-    const trigger =
-      dashboardDateFromText(td[3].textContent);
-
-    const pay =
-      dashboardDateFromText(td[4].textContent);
-
-    const amount =
-      dashboardMoneyNumber(td[5].textContent);
-
-    if(trigger && trigger <= today){
-
-      readyCount++;
-      readyAmount += amount;
-
-    }else{
-
-      pendingAmount += amount;
-
-    }
-
-    if(pay && pay >= today){
-
-      if(!nextPay || pay < nextPay){
-        nextPay = pay;
-      }
-
-    }
-
-  });
-
-  return {
-    readyCount,
-    readyAmount,
-    pendingAmount,
-    nextPay
-  };
-}
-
-function renderDashboard(){
-
-  if(!$('overview')) return;
-
-  const today = dashboardToday();
-  const items = dashboardScheduleData();
-
-  $('overviewToday').textContent =
-    fmt(today);
-
-  $('ovProject').textContent =
-    current?.name || '-';
-
-  $('ovSignDate').textContent =
-    $('signDate')?.value
-      ? $('signDate').value.replaceAll('-','/')
-      : '-';
-
-  let overdue = 0;
-  let due14 = 0;
-  let due30 = 0;
-  let pending = 0;
-  let completed = 0;
-
-  const important = [];
-
-  items.forEach(item=>{
-
-    const st = dashboardItemStatus(item);
-
-    if(st.code==='overdue'){
-      overdue++;
-      important.push({item,st,sort:-10000+(st.days||0)});
-    }
-
-    if(st.code==='due14'){
-      due14++;
-      important.push({item,st,sort:st.days});
-    }
-
-    if(st.code==='due30'){
-      due30++;
-      important.push({item,st,sort:st.days});
-    }
-
-    if(st.code==='pending'){
-      pending++;
-      important.push({item,st,sort:-500});
-    }
-
-    if(st.code==='completed'){
-      completed++;
-    }
-
-  });
-
-  $('ovOverdue').textContent = overdue;
-  $('ovDue14').textContent = due14;
-  $('ovDue30').textContent = due30;
-  $('ovPendingApproval').textContent = pending;
-  $('ovCompleted').textContent = completed;
-
-  /*
-    注意：
-    14日內到期是 0~14日；
-    30日內到期是 15~30日，
-    不重複計算。
-  */
-
-  let overallText = '正常管制';
-
-  if(overdue > 0){
-    overallText = '有逾期事項';
-  }else if(due14 > 0){
-    overallText = '有近期到期事項';
-  }else if(pending > 0){
-    overallText = '有成果待核定';
-  }
-
-  $('ovOverallStatus').textContent =
-    overallText;
-
-  /* 完成度 */
-
-  const total = items.length;
-
-  const percent =
-    total
-      ? Math.round(completed / total * 100)
-      : 0;
-
-  $('ovProgress').textContent =
-    percent+'%';
-
-  $('ovProgressText').textContent =
-    completed+' / '+total;
-
-  $('ovProgressBar').style.width =
-    percent+'%';
-
-  /*
-    近期重要工作排序
-  */
-
-  important.sort((a,b)=>a.sort-b.sort);
-
-  const topItems =
-    important.slice(0,8);
-
-  $('ovImportantWorks').innerHTML =
-    topItems.length
-      ? topItems.map(({item,st})=>{
-
-          let sub = '';
-
-          if(item.submit){
-            sub +=
-              '已提送 '+fmt(item.submit);
-          }else{
-            sub +=
-              '尚未登錄提送日';
-          }
-
-          if(item.approvalActual){
-            sub +=
-              '｜核定 '+fmt(item.approvalActual);
-          }
-
-          return `
-            <div class="work-item ${st.className}">
-              <div class="work-status">
-                ${st.text}
-              </div>
-
-              <div class="work-name">
-                <b>${item.name}</b>
-                <span>${sub}</span>
-              </div>
-
-              <div class="work-date">
-                契約期限<br>
-                <b>${fmt(item.deadline)||'-'}</b>
-              </div>
-            </div>
-          `;
-
-        }).join('')
-      : `
-        <div class="overview-empty">
-          目前無逾期、待核定或30日內到期事項
-        </div>
-      `;
-
-  /*
-    階段摘要
-  */
-
-  const stages = {};
-
-  items.forEach(item=>{
-
-    if(!stages[item.stage]){
-      stages[item.stage] = {
-        total:0,
-        done:0
-      };
-    }
-
-    stages[item.stage].total++;
-
-    if(item.approvalActual){
-      stages[item.stage].done++;
-    }
-
-  });
-
-  $('ovStageList').innerHTML =
-    Object.entries(stages)
-      .map(([stage,v])=>{
-
-        const p =
-          v.total
-            ? Math.round(v.done/v.total*100)
-            : 0;
-
-        return `
-          <div class="stage-item">
-            <span>${stage}</span>
-            <b>${v.done}/${v.total}（${p}%）</b>
-          </div>
-        `;
-
-      }).join('');
-
-  /*
-    付款摘要
-  */
-
-  const pay =
-    getPaymentDashboardData();
-
-  $('ovPayReadyCount').textContent =
-    pay.readyCount+' 項';
-
-  $('ovPayReadyAmount').textContent =
-    money(pay.readyAmount)+' 元';
-
-  $('ovPayPendingAmount').textContent =
-    money(pay.pendingAmount)+' 元';
-
-  $('ovNextPayDate').textContent =
-    pay.nextPay
-      ? fmt(pay.nextPay)
-      : '-';
-}
-
-function scrollToSchedule(){
-
-  const el =
-    $('scheduleTable');
-
-  if(el){
-    el.scrollIntoView({
-      behavior:'smooth',
-      block:'start'
-    });
-  }
-
-}
-
-function scrollToPayment(){
-
-  const el =
-    $('paymentTable');
-
-  if(el){
-    el.scrollIntoView({
-      behavior:'smooth',
-      block:'start'
-    });
-  }
-
-}
-
-/*
-  將 Dashboard 掛到既有 recalc()
-  不修改原 recalc 的內容，
-  降低影響既有系統的風險。
-*/
-
-if(typeof recalc === 'function'){
-
-  const originalRecalc = recalc;
-
-  recalc = function(){
-
-    const result =
-      originalRecalc.apply(
-        this,
-        arguments
-      );
-
-    try{
-      renderDashboard();
-    }catch(err){
-      console.error(
-        'Dashboard render error:',
-        err
-      );
-    }
-
-    return result;
-  };
-
-}
-
-/*
-  若頁面初始化後資料已存在，
-  再補跑一次 Dashboard。
-*/
-
-window.addEventListener(
-  'load',
-  ()=>{
-    setTimeout(()=>{
-      try{
-        renderDashboard();
-      }catch(e){}
-    },300);
-  }
-);
 /* =========================================================
    履約管制總覽 Dashboard
    ========================================================= */
@@ -584,27 +485,18 @@ function dashboardDayDiff(a,b){
 }
 
 function dashboardReadSchedule(){
-
   const table = document.getElementById('scheduleTable');
   if(!table) return [];
 
-  const rows = table.querySelectorAll('tbody tr');
+  const tableRows = table.querySelectorAll('tbody tr');
   const result = [];
 
-  rows.forEach(tr=>{
-
+  tableRows.forEach(tr=>{
     const td = tr.querySelectorAll('td');
     if(td.length < 9) return;
 
     const stage = td[0].innerText.trim();
     const name = td[1].innerText.trim();
-
-    /*
-      第5欄：契約期限
-      第6欄：實際提送日
-      第7欄：實際/預估核定日
-      第8欄：狀態
-    */
 
     const deadlineText = td[4].innerText.trim();
 
@@ -634,14 +526,12 @@ function dashboardReadSchedule(){
       submit,
       approval
     });
-
   });
 
   return result;
 }
 
 function dashboardParseDate(text){
-
   if(!text) return null;
 
   const m =
@@ -660,7 +550,6 @@ function dashboardParseDate(text){
 }
 
 function dashboardFormatDate(d){
-
   if(!d) return '-';
 
   const y = d.getFullYear();
@@ -677,7 +566,6 @@ function dashboardFormatDate(d){
 }
 
 function dashboardNumber(text){
-
   return Number(
     String(text || '')
       .replace(/[^\d.-]/g,'')
@@ -685,7 +573,6 @@ function dashboardNumber(text){
 }
 
 function dashboardPaymentData(){
-
   const table =
     document.getElementById('paymentTable');
 
@@ -708,7 +595,6 @@ function dashboardPaymentData(){
   table
     .querySelectorAll('tbody tr')
     .forEach(tr=>{
-
       const td = tr.querySelectorAll('td');
 
       if(td.length < 6) return;
@@ -729,24 +615,17 @@ function dashboardPaymentData(){
         );
 
       if(trigger && trigger <= today){
-
         readyCount++;
         readyAmount += amount;
-
       }else{
-
         pendingAmount += amount;
-
       }
 
       if(payDate && payDate >= today){
-
         if(!nextPay || payDate < nextPay){
           nextPay = payDate;
         }
-
       }
-
     });
 
   return {
@@ -758,13 +637,11 @@ function dashboardPaymentData(){
 }
 
 function dashboardMoney(n){
-
   return Number(n || 0)
     .toLocaleString('zh-TW');
 }
 
 function renderDashboard(){
-
   const overview =
     document.getElementById('overview');
 
@@ -779,11 +656,6 @@ function renderDashboard(){
     todayEl.textContent =
       dashboardFormatDate(today);
   }
-
-  /*
-    目前標段：
-    優先讀 projectSelect 顯示文字
-  */
 
   const projectSelect =
     document.getElementById('projectSelect');
@@ -802,10 +674,6 @@ function renderDashboard(){
     projectEl.textContent = projectName;
   }
 
-  /*
-    簽約日
-  */
-
   const signDate =
     document.getElementById('signDate');
 
@@ -819,10 +687,6 @@ function renderDashboard(){
         : '-';
   }
 
-  /*
-    履約主時程
-  */
-
   const items =
     dashboardReadSchedule();
 
@@ -835,16 +699,12 @@ function renderDashboard(){
   const important = [];
 
   items.forEach(item=>{
-
     if(item.approval){
-
       completed++;
-
       return;
     }
 
     if(item.submit && !item.approval){
-
       pendingApproval++;
 
       important.push({
@@ -866,7 +726,6 @@ function renderDashboard(){
       );
 
     if(days < 0){
-
       overdue++;
 
       important.push({
@@ -875,9 +734,7 @@ function renderDashboard(){
         label:`逾期 ${Math.abs(days)} 日`,
         sort:-10000 + days
       });
-
     }else if(days <= 14){
-
       due14++;
 
       important.push({
@@ -889,9 +746,7 @@ function renderDashboard(){
             : `${days} 日內到期`,
         sort:days
       });
-
     }else if(days <= 30){
-
       due30++;
 
       important.push({
@@ -900,14 +755,8 @@ function renderDashboard(){
         label:`${days} 日內到期`,
         sort:days
       });
-
     }
-
   });
-
-  /*
-    KPI
-  */
 
   setDashboardText(
     'ovOverdue',
@@ -934,10 +783,6 @@ function renderDashboard(){
     completed
   );
 
-  /*
-    整體狀態
-  */
-
   let overall = '正常管制';
 
   if(overdue > 0){
@@ -955,13 +800,9 @@ function renderDashboard(){
     overall
   );
 
-  /*
-    成果完成度
-  */
-
   const total = items.length;
 
-  const pct =
+  const progressPct =
     total
       ? Math.round(
           completed / total * 100
@@ -970,7 +811,7 @@ function renderDashboard(){
 
   setDashboardText(
     'ovProgress',
-    `${pct}%`
+    `${progressPct}%`
   );
 
   setDashboardText(
@@ -985,12 +826,8 @@ function renderDashboard(){
 
   if(progressBar){
     progressBar.style.width =
-      `${pct}%`;
+      `${progressPct}%`;
   }
-
-  /*
-    近期重要工作
-  */
 
   important.sort(
     (a,b)=>a.sort-b.sort
@@ -1002,22 +839,17 @@ function renderDashboard(){
     );
 
   if(importantBox){
-
     if(!important.length){
-
       importantBox.innerHTML = `
         <div class="overview-empty">
           目前無逾期、待核定或30日內到期事項
         </div>
       `;
-
     }else{
-
       importantBox.innerHTML =
         important
           .slice(0,8)
           .map(item=>{
-
             let cls = 'work-info';
 
             if(item.type === 'danger'){
@@ -1034,7 +866,6 @@ function renderDashboard(){
 
             return `
               <div class="work-item ${cls}">
-
                 <div class="work-status">
                   ${item.label}
                 </div>
@@ -1057,32 +888,21 @@ function renderDashboard(){
                     )}
                   </b>
                 </div>
-
               </div>
             `;
-
           })
           .join('');
-
     }
-
   }
-
-  /*
-    階段統計
-  */
 
   const stageMap = {};
 
   items.forEach(item=>{
-
     if(!stageMap[item.stage]){
-
       stageMap[item.stage] = {
         total:0,
         done:0
       };
-
     }
 
     stageMap[item.stage].total++;
@@ -1090,7 +910,6 @@ function renderDashboard(){
     if(item.approval){
       stageMap[item.stage].done++;
     }
-
   });
 
   const stageBox =
@@ -1099,11 +918,9 @@ function renderDashboard(){
     );
 
   if(stageBox){
-
     stageBox.innerHTML =
       Object.entries(stageMap)
         .map(([stage,v])=>{
-
           const p =
             v.total
               ? Math.round(
@@ -1115,25 +932,16 @@ function renderDashboard(){
 
           return `
             <div class="stage-item">
-
               <span>${stage}</span>
-
               <b>
                 ${v.done}/${v.total}
                 （${p}%）
               </b>
-
             </div>
           `;
-
         })
         .join('');
-
   }
-
-  /*
-    付款摘要
-  */
 
   const pay =
     dashboardPaymentData();
@@ -1165,22 +973,18 @@ function renderDashboard(){
         )
       : '-'
   );
-
 }
 
 function setDashboardText(id,text){
-
   const el =
     document.getElementById(id);
 
   if(el){
     el.textContent = text;
   }
-
 }
 
 function scrollToSchedule(){
-
   const el =
     document.getElementById(
       'scheduleTable'
@@ -1192,11 +996,9 @@ function scrollToSchedule(){
       block:'start'
     });
   }
-
 }
 
 function scrollToPayment(){
-
   const el =
     document.getElementById(
       'paymentTable'
@@ -1208,18 +1010,10 @@ function scrollToPayment(){
       block:'start'
     });
   }
-
 }
-
-/*
-  監看既有畫面內容。
-  當 recalc、切換標段、日期變更後，
-  table DOM 有異動時重新刷新 Dashboard。
-*/
 
 const dashboardObserver =
   new MutationObserver(()=>{
-
     clearTimeout(
       window.__dashboardTimer
     );
@@ -1229,13 +1023,11 @@ const dashboardObserver =
         renderDashboard,
         80
       );
-
   });
 
 window.addEventListener(
   'load',
   ()=>{
-
     setTimeout(
       renderDashboard,
       300
@@ -1252,7 +1044,6 @@ window.addEventListener(
       );
 
     if(schedule){
-
       dashboardObserver.observe(
         schedule,
         {
@@ -1260,11 +1051,9 @@ window.addEventListener(
           subtree:true
         }
       );
-
     }
 
     if(payment){
-
       dashboardObserver.observe(
         payment,
         {
@@ -1272,17 +1061,11 @@ window.addEventListener(
           subtree:true
         }
       );
-
     }
-
-    /*
-      日期、標段變更時更新
-    */
 
     document.addEventListener(
       'change',
       e=>{
-
         const ids = [
           'signDate',
           'projectSelect',
@@ -1292,12 +1075,10 @@ window.addEventListener(
         ];
 
         if(ids.includes(e.target.id)){
-
           setTimeout(
             renderDashboard,
             100
           );
-
         }
 
         if(
@@ -1306,16 +1087,12 @@ window.addEventListener(
             '#scheduleTable'
           )
         ){
-
           setTimeout(
             renderDashboard,
             100
           );
-
         }
-
       }
     );
-
   }
 );
