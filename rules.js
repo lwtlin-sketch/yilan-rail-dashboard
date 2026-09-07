@@ -1,56 +1,237 @@
-window.YilanRules={
-commonRules:[
-{id:'execPlan',group:'啟動',name:'執行服務計畫書',triggerType:'signDate',days:30,dayType:'calendar',predecessor:'sign',contractRule:true,payment:'工程設計10%（累計20%）',note:'簽約後30日內提送'},
-{id:'surveyPlan',group:'調查',name:'補充測量工作計畫書',triggerType:'signDate',days:30,dayType:'calendar',predecessor:'sign',contractRule:true,note:'簽約後30日內提送'},
-{id:'geoPlan',group:'調查',name:'補充地質調查工作計畫書',triggerType:'signDate',days:30,dayType:'calendar',predecessor:'sign',contractRule:true,note:'簽約後30日內提送'},
-{id:'utilityPlan',group:'調查',name:'管線調查工作計畫書',triggerType:'signDate',days:30,dayType:'calendar',predecessor:'sign',contractRule:true,note:'簽約後30日內提送'},
-{id:'surveyResult',group:'調查',name:'補充測量成果報告',triggerType:'approvalOf',triggerRef:'surveyPlan',days:120,dayType:'calendar',predecessor:'surveyPlan',contractRule:true,note:'工作計畫核定後120日內'},
-{id:'geoResult',group:'調查',name:'補充地質調查成果報告',triggerType:'approvalOf',triggerRef:'geoPlan',days:120,dayType:'calendar',predecessor:'geoPlan',contractRule:true,note:'工作計畫核定後120日內'},
-{id:'utilityResult',group:'調查',name:'管線調查成果報告',triggerType:'approvalOf',triggerRef:'utilityPlan',days:120,dayType:'calendar',predecessor:'utilityPlan',contractRule:true,note:'工作計畫核定後120日內'},
-{id:'designRiskPlan',group:'配套成果',name:'施工風險評估執行服務計畫書',triggerType:'signDate',days:60,dayType:'calendar',predecessor:'sign',contractRule:true,note:'契約生效後60日內'},
-{id:'basic',group:'設計',name:'基本設計成果初稿',triggerType:'approvalOf',triggerRef:'execPlan',days:150,dayType:'calendar',predecessor:'execPlan',contractRule:true,payment:'工程設計20%（累計40%）',note:'執行服務計畫書核定後150日內'},
-{id:'valueEngineering',group:'配套成果',name:'價值工程研析報告',triggerType:'sameAs',triggerRef:'basic',predecessor:'basic',contractRule:true,note:'併基本設計成果提送'},
-{id:'designRisk',group:'配套成果',name:'設計階段施工風險評估報告',triggerType:'sameAs',triggerRef:'basic',predecessor:'basic',contractRule:true,note:'併基本設計成果提送'},
-{id:'pcc',group:'審議',name:'工程會經費審議核定',triggerType:'externalDate',dateField:'pccDate',predecessor:'basic',contractRule:false,payment:'工程設計5%（累計45%）',note:'外部審議節點，契約未訂統一固定日數'},
-{id:'final',group:'設計',name:'期末設計成果初稿',triggerType:'basicApprovalOrNotice',triggerRef:'basic',days:300,dayType:'calendar',predecessor:'basic',contractRule:true,payment:'工程設計40%（累計85%）',note:'基本設計核定後或甲方通知日起300日內'},
-{id:'riskFinal',group:'配套成果',name:'施工風險評估／價值工程正式本',triggerType:'sameAs',triggerRef:'final',predecessor:'final',contractRule:true,note:'併期末設計成果提送'},
-{id:'tender',group:'招標',name:'招標文件成果核定',triggerType:'externalDate',dateField:'tenderApprovalDate',predecessor:'final',contractRule:false,payment:'工程設計5%（累計90%）',note:'付款節點；契約未訂統一固定日數'},
-{id:'worksAward',group:'招標',name:'各分標工程全部決標',triggerType:'externalDate',dateField:'allWorksAwardDate',predecessor:'tender',contractRule:false,payment:'工程設計5%（累計95%）',note:'依各標工程預算比例支付'},
-{id:'riskUpdate',group:'施工前置',name:'施工標決標後施工風險簡報／進版更新',triggerType:'eventAfter',triggerRef:'worksAward',predecessor:'worksAward',contractRule:true,note:'施工標決標後辦理，未訂固定日數'},
-{id:'close',group:'完工',name:'全部工程竣工驗收、結算且無待解決事項',triggerType:'externalDate',dateField:'allWorksCloseDate',predecessor:'worksAward',contractRule:false,payment:'工程設計尾款至100%',note:'契約完成及設計尾款節點'}],
-northExtraRules:[
-{id:'stationData',group:'車站',name:'車站規劃資料蒐集',triggerType:'approvalOf',triggerRef:'execPlan',days:60,dayType:'calendar',predecessor:'execPlan',contractRule:true,note:'執行服務計畫核定後60日'},
-{id:'stationConcept',group:'車站',name:'車站概念設計',triggerType:'approvalOf',triggerRef:'execPlan',days:120,dayType:'calendar',predecessor:'execPlan',contractRule:true,note:'執行服務計畫核定後120日'}],
-southExtraRules:[],
-landRules:[
-{id:'rowDrawing',group:'用地',name:'設計完成後路權圖等成果',triggerType:'eventAfter',triggerRef:'final',days:30,dayType:'calendar',predecessor:'final',contractRule:true,note:'完成設計後30日'},
-{id:'tempBoundary',group:'用地',name:'臨時界樁測設',triggerType:'externalNotice',days:30,dayType:'calendar',contractRule:true,note:'甲方通知後30日'},
-{id:'permBoundaryPlan',group:'用地',name:'永久路權樁控制點設置計畫',triggerType:'externalNotice',days:10,dayType:'calendar',contractRule:true,note:'甲方通知開工後10日'},
-{id:'permBoundary',group:'用地',name:'永久路權樁測設完成',triggerType:'externalNotice',days:280,dayType:'calendar',contractRule:true,note:'甲方通知開工後280日'}],
-waterRules:[
-{id:'runoffPlan',group:'水利',name:'出流管制工作計畫書',triggerType:'awardDate',days:30,dayType:'calendar',contractRule:true,note:'決標後30日'}],
-supervisionRules:[
-{id:'mobilization',name:'初期動員計畫',reviewDays:14,note:'監造收件後14日'},
-{id:'insurance',name:'工程保險',reviewDays:5,note:'監造收件後5日'},
-{id:'riverPermit',name:'河川建造物／公地使用申請',reviewDays:10,note:'監造收件後10日'},
-{id:'subPlan',name:'分項施工計畫',reviewDays:10,note:'監造收件後10日'},
-{id:'airPlan',name:'空氣污染防制計畫',reviewDays:5,note:'監造收件後5日'},
-{id:'qualityPlan',name:'品質計畫',reviewDays:10,note:'監造收件後10日'},
-{id:'runoffReduction',name:'逕流廢水污染削減計畫',reviewDays:10,note:'監造收件後10日'},
-{id:'oshPlan',name:'職業安全衛生管理計畫',reviewDays:10,note:'監造收件後10日'},
-{id:'envPlan',name:'環境保護執行計畫',reviewDays:10,note:'監造收件後10日'},
-{id:'drawingReview',name:'施工圖審核',reviewDays:5,note:'監造收件後5日'},
-{id:'materialReview',name:'工程材料送審',reviewDays:5,note:'監造收件後5日'},
-{id:'recordReview',name:'施工紀錄',reviewDays:5,note:'監造收件後5日'},
-{id:'foreignWorker',name:'外籍移工／技術人員申請',reviewDays:5,note:'監造收件後5日'},
-{id:'rfi',name:'契約文件／設計圖釋疑',reviewDays:5,note:'監造收件後5日'}],
-settings:{showSupervision:false,showLandRules:true,showWaterRules:true},
-getRules(projectId){
- const all=[...this.commonRules];
- if(projectId==='north')all.push(...this.northExtraRules);
- if(projectId==='south')all.push(...this.southExtraRules);
- if(this.settings.showLandRules)all.push(...this.landRules);
- if(this.settings.showWaterRules)all.push(...this.waterRules);
- return all;
-}
+/* =========================================================
+   宜蘭高架履約管制系統：契約時限規則主檔
+   原則：
+   1. 南、北段共用規則集中管理；差異另列 extra rules。
+   2. 契約期限、外部日期、條件式工作分開。
+   3. PCM 30日僅供管理預估，不視為契約明定審查期限。
+   4. 監造規則保留，但目前不顯示、不啟用。
+   5. 水土保持計畫預設不顯示，保留未來啟用機制。
+   ========================================================= */
+
+window.YilanRules = {
+  commonRules: [
+    {
+      id:'execPlan', group:'啟動', name:'執行服務計畫書',
+      triggerType:'signDate', days:30, dayType:'calendar', predecessor:'sign',
+      contractRule:true, managementOnly:false,
+      payment:'工程設計10%（累計20%）',
+      note:'簽約後30日內提送'
+    },
+    {
+      id:'surveyPlan', group:'調查', name:'補充測量工作計畫書',
+      triggerType:'signDate', days:30, dayType:'calendar', predecessor:'sign',
+      contractRule:true, managementOnly:false,
+      note:'簽約後30日內提送'
+    },
+    {
+      id:'geoPlan', group:'調查', name:'補充地質調查工作計畫書',
+      triggerType:'signDate', days:30, dayType:'calendar', predecessor:'sign',
+      contractRule:true, managementOnly:false,
+      note:'簽約後30日內提送'
+    },
+    {
+      id:'utilityPlan', group:'調查', name:'管線調查工作計畫書',
+      triggerType:'signDate', days:30, dayType:'calendar', predecessor:'sign',
+      contractRule:true, managementOnly:false,
+      note:'簽約後30日內提送'
+    },
+    {
+      id:'surveyResult', group:'調查', name:'補充測量成果報告',
+      triggerType:'approvalOf', triggerRef:'surveyPlan', days:120, dayType:'calendar', predecessor:'surveyPlan',
+      contractRule:true, managementOnly:false,
+      note:'補充測量工作計畫核定後120日內'
+    },
+    {
+      id:'geoResult', group:'調查', name:'補充地質調查成果報告',
+      triggerType:'approvalOf', triggerRef:'geoPlan', days:120, dayType:'calendar', predecessor:'geoPlan',
+      contractRule:true, managementOnly:false,
+      note:'補充地質調查工作計畫核定後120日內'
+    },
+    {
+      id:'utilityResult', group:'調查', name:'管線調查成果報告',
+      triggerType:'approvalOf', triggerRef:'utilityPlan', days:120, dayType:'calendar', predecessor:'utilityPlan',
+      contractRule:true, managementOnly:false,
+      note:'管線調查工作計畫核定後120日內'
+    },
+    {
+      id:'designRiskPlan', group:'配套成果', name:'施工風險評估執行服務計畫書',
+      triggerType:'signDate', days:60, dayType:'calendar', predecessor:'sign',
+      contractRule:true, managementOnly:false,
+      note:'契約生效後60日內'
+    },
+    {
+      id:'basic', group:'設計', name:'基本設計成果初稿',
+      triggerType:'approvalOf', triggerRef:'execPlan', days:150, dayType:'calendar', predecessor:'execPlan',
+      contractRule:true, managementOnly:false,
+      payment:'工程設計20%（累計40%）',
+      note:'執行服務計畫書核定後150日內'
+    },
+    {
+      id:'valueEngineering', group:'配套成果', name:'價值工程研析報告',
+      triggerType:'sameAs', triggerRef:'basic', predecessor:'basic',
+      contractRule:true, managementOnly:false,
+      note:'併基本設計成果提送'
+    },
+    {
+      id:'designRisk', group:'配套成果', name:'設計階段施工風險評估報告',
+      triggerType:'sameAs', triggerRef:'basic', predecessor:'basic',
+      contractRule:true, managementOnly:false,
+      note:'併基本設計成果提送'
+    },
+    {
+      id:'pcc', group:'審議', name:'工程會經費審議核定',
+      triggerType:'externalDate', dateField:'pccDate', predecessor:'basic',
+      contractRule:false, managementOnly:false,
+      payment:'工程設計5%（累計45%）',
+      note:'外部審議節點；契約未訂統一固定日數'
+    },
+    {
+      id:'final', group:'設計', name:'期末設計成果初稿',
+      triggerType:'basicApprovalOrNotice', triggerRef:'basic', days:300, dayType:'calendar', predecessor:'basic',
+      contractRule:true, managementOnly:false,
+      payment:'工程設計40%（累計85%）',
+      note:'基本設計核定後或甲方通知日起300日內'
+    },
+    {
+      id:'riskFinal', group:'配套成果', name:'施工風險評估／價值工程正式本',
+      triggerType:'sameAs', triggerRef:'final', predecessor:'final',
+      contractRule:true, managementOnly:false,
+      note:'併期末設計成果提送'
+    },
+    {
+      id:'tender', group:'招標', name:'招標文件成果核定',
+      triggerType:'externalDate', dateField:'tenderApprovalDate', predecessor:'final',
+      contractRule:false, managementOnly:false,
+      payment:'工程設計5%（累計90%）',
+      note:'付款節點；契約未訂統一固定日數'
+    },
+    {
+      id:'worksAward', group:'招標', name:'各分標工程全部決標',
+      triggerType:'externalDate', dateField:'allWorksAwardDate', predecessor:'tender',
+      contractRule:false, managementOnly:false,
+      payment:'工程設計5%（累計95%）',
+      note:'依各標工程預算比例支付'
+    },
+    {
+      id:'riskUpdate', group:'施工前置', name:'施工標決標後施工風險簡報／進版更新',
+      triggerType:'eventAfter', triggerRef:'worksAward', predecessor:'worksAward',
+      contractRule:true, managementOnly:false,
+      note:'施工標決標後辦理；契約未訂固定日數'
+    },
+    {
+      id:'close', group:'完工', name:'全部工程竣工驗收、結算且無待解決事項',
+      triggerType:'externalDate', dateField:'allWorksCloseDate', predecessor:'worksAward',
+      contractRule:false, managementOnly:false,
+      payment:'工程設計尾款至100%',
+      note:'契約完成及設計尾款節點'
+    }
+  ],
+
+  northExtraRules: [
+    {
+      id:'stationData', group:'車站', name:'車站規劃資料蒐集',
+      triggerType:'approvalOf', triggerRef:'execPlan', days:60, dayType:'calendar', predecessor:'execPlan',
+      contractRule:true, managementOnly:false,
+      note:'執行服務計畫核定後60日'
+    },
+    {
+      id:'stationConcept', group:'車站', name:'車站概念設計',
+      triggerType:'approvalOf', triggerRef:'execPlan', days:120, dayType:'calendar', predecessor:'execPlan',
+      contractRule:true, managementOnly:false,
+      note:'執行服務計畫核定後120日'
+    }
+  ],
+
+  southExtraRules: [],
+
+  landRules: [
+    {
+      id:'rowDrawing', group:'用地', name:'設計完成後路權圖等成果',
+      triggerType:'eventAfter', triggerRef:'final', days:30, dayType:'calendar', predecessor:'final',
+      contractRule:true, managementOnly:false,
+      note:'完成設計後30日'
+    },
+    {
+      id:'tempBoundary', group:'用地', name:'臨時界樁測設',
+      triggerType:'externalNotice', days:30, dayType:'calendar', predecessor:null,
+      contractRule:true, managementOnly:false,
+      note:'甲方通知後30日；目前未設通知日欄位，不自動推算'
+    },
+    {
+      id:'permBoundaryPlan', group:'用地', name:'永久路權樁控制點設置計畫',
+      triggerType:'externalNotice', days:10, dayType:'calendar', predecessor:null,
+      contractRule:true, managementOnly:false,
+      note:'甲方通知開工後10日；目前未設通知日欄位，不自動推算'
+    },
+    {
+      id:'permBoundary', group:'用地', name:'永久路權樁測設完成',
+      triggerType:'externalNotice', days:280, dayType:'calendar', predecessor:null,
+      contractRule:true, managementOnly:false,
+      note:'甲方通知開工後280日；目前未設通知日欄位，不自動推算'
+    }
+  ],
+
+  /*
+    出流管制與水保均採條件式管理。
+    南、北段附件A均將出流管制計畫書／水土保持計畫書列於期末設計成果，
+    並註明「基本設計成果核定後或經甲方通知期限內提送」。
+    因未載固定天數，系統不再以「決標後30日」自行計算。
+  */
+  waterRules: [
+    {
+      id:'runoffFinal', group:'水利', name:'出流管制計畫書',
+      triggerType:'conditionalAfterBasic', triggerRef:'basic', predecessor:'basic',
+      contractRule:true, managementOnly:false,
+      conditional:true, applicability:'pending', enabled:true,
+      note:'條件式工作；基本設計成果核定後或依甲方通知期限內提送。未訂固定日數，不自動推算契約期限'
+    },
+    {
+      id:'soilWaterPlan', group:'水保', name:'水土保持計畫書',
+      triggerType:'conditionalAfterBasic', triggerRef:'basic', predecessor:'basic',
+      contractRule:true, managementOnly:false,
+      conditional:true, applicability:'not-required', enabled:false,
+      note:'條件式工作；目前依本計畫現況預設不顯示。後續確認依法須辦時再啟用'
+    }
+  ],
+
+  /* 保留，現階段不顯示 */
+  supervisionRules: [
+    {id:'mobilization',name:'初期動員計畫',reviewDays:14,dayType:'calendar',note:'監造收件後14日'},
+    {id:'insurance',name:'工程保險',reviewDays:5,dayType:'calendar',note:'監造收件後5日'},
+    {id:'riverPermit',name:'河川建造物／公地使用申請',reviewDays:10,dayType:'calendar',note:'監造收件後10日'},
+    {id:'subPlan',name:'分項施工計畫',reviewDays:10,dayType:'calendar',note:'監造收件後10日'},
+    {id:'airPlan',name:'空氣污染防制計畫',reviewDays:5,dayType:'calendar',note:'監造收件後5日'},
+    {id:'qualityPlan',name:'品質計畫',reviewDays:10,dayType:'calendar',note:'監造收件後10日'},
+    {id:'runoffReduction',name:'逕流廢水污染削減計畫',reviewDays:10,dayType:'calendar',note:'監造收件後10日'},
+    {id:'oshPlan',name:'職業安全衛生管理計畫',reviewDays:10,dayType:'calendar',note:'監造收件後10日'},
+    {id:'envPlan',name:'環境保護執行計畫',reviewDays:10,dayType:'calendar',note:'監造收件後10日'},
+    {id:'drawingReview',name:'施工圖審核',reviewDays:5,dayType:'calendar',note:'監造收件後5日'},
+    {id:'materialReview',name:'工程材料送審',reviewDays:5,dayType:'calendar',note:'監造收件後5日'},
+    {id:'recordReview',name:'施工紀錄',reviewDays:5,dayType:'calendar',note:'監造收件後5日'},
+    {id:'foreignWorker',name:'外籍移工／技術人員申請',reviewDays:5,dayType:'calendar',note:'監造收件後5日'},
+    {id:'rfi',name:'契約文件／設計圖釋疑',reviewDays:5,dayType:'calendar',note:'監造收件後5日'}
+  ],
+
+  settings: {
+    showSupervision:false,
+    showLandRules:true,
+    showWaterRules:true
+  },
+
+  getRules(projectId){
+    const all=[...this.commonRules];
+
+    if(projectId==='north') all.push(...this.northExtraRules);
+    if(projectId==='south') all.push(...this.southExtraRules);
+
+    if(this.settings.showLandRules){
+      all.push(...this.landRules.filter(rule=>rule.enabled!==false));
+    }
+
+    if(this.settings.showWaterRules){
+      all.push(...this.waterRules.filter(rule=>rule.enabled!==false));
+    }
+
+    return all;
+  }
 };
