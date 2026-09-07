@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>宜蘭高架｜履約期程與付款管制</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="timeline.css">
 </head>
 
 <body>
@@ -247,6 +248,66 @@
       </div>
 
     </section>
+<!-- 第二階段：時程關聯／甘特圖／延誤／付款 -->
+<section class="card schedule-control" id="scheduleControl">
+  <div class="hd"><h2>時程關聯、甘特圖與付款里程碑</h2></div>
+  <div class="bd">
+
+    <div class="timeline-note">
+      <b>判讀原則：</b>
+      契約明定期限、管理預估與外部日期分開顯示。
+      前置成果「核定日」尚未登錄時，暫採上方 PCM 管理預估審查日數推估後續日期，
+      但不視為契約明定審查期限。
+    </div>
+
+    <div class="timeline-kpis">
+      <div><span>起算日</span><b id="tlStartDate">-</b></div>
+      <div><span>目前預估最末日期</span><b id="tlForecastFinish">-</b></div>
+      <div><span>最大延誤</span><b id="tlDelayDays">0 日</b></div>
+      <div><span>受延誤影響節點</span><b id="tlAffectedCount">0 項</b></div>
+    </div>
+
+    <div class="timeline-block">
+      <div class="timeline-title"><h3>一、履約甘特圖</h3><span>灰線＝契約／管理基準；實線＝目前預估／實際</span></div>
+      <div id="ganttChart" class="gantt-chart"></div>
+    </div>
+
+    <div class="timeline-block">
+      <div class="timeline-title"><h3>二、前後置關聯與延誤傳遞</h3><span>不自行補填契約未訂固定日數之節點</span></div>
+      <div class="scroll">
+        <table class="tbl dependency-table" id="dependencyTable">
+          <thead><tr><th>類別</th><th>工作／成果</th><th>前置節點</th><th>期限性質</th><th>基準日期</th><th>目前日期</th><th>延誤判讀</th><th>付款連動</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="timeline-block">
+      <div class="timeline-title"><h3>三、延誤影響</h3><span>實際提送／核定日一旦登錄，即重新推估後續節點</span></div>
+      <div id="delayImpactBox" class="delay-impact"></div>
+    </div>
+
+    <div class="timeline-block">
+      <div class="timeline-title"><h3>四、付款里程碑</h3><span>直接與「付款預測與年度資金需求」表同步</span></div>
+      <div id="paymentMilestoneStrip" class="payment-strip"></div>
+    </div>
+
+    <details class="supervision-details">
+      <summary>五、施工監造審查時限基準（先折疊顯示）</summary>
+      <div class="timeline-note">
+        本階段先列契約明定之常用審查時限；下一版再增設「施工廠商提送日／監造收件日／審查完成日」輸入欄，
+        由系統依收件日自動計算5日或10日審查期限。
+      </div>
+      <div class="scroll">
+        <table class="tbl" id="supervisionRuleTable">
+          <thead><tr><th>事項</th><th>施工廠商期限</th><th>監造審查期限</th><th>說明</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+
+  </div>
+</section>
 
 
     <!-- 一、基準日 -->
@@ -558,6 +619,6 @@
 </div>
 
 <script src="app.js"></script>
-
+<script src="stage2.js"></script>
 </body>
 </html>
