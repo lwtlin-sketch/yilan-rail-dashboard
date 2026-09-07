@@ -559,3 +559,763 @@ window.addEventListener(
     },300);
   }
 );
+/* =========================================================
+   履約管制總覽 Dashboard
+   ========================================================= */
+
+function dashboardToday(){
+  const d = new Date();
+  d.setHours(12,0,0,0);
+  return d;
+}
+
+function dashboardDayDiff(a,b){
+  if(!a || !b) return null;
+
+  const d1 = new Date(a);
+  const d2 = new Date(b);
+
+  d1.setHours(12,0,0,0);
+  d2.setHours(12,0,0,0);
+
+  return Math.ceil(
+    (d2.getTime() - d1.getTime()) / 86400000
+  );
+}
+
+function dashboardReadSchedule(){
+
+  const table = document.getElementById('scheduleTable');
+  if(!table) return [];
+
+  const rows = table.querySelectorAll('tbody tr');
+  const result = [];
+
+  rows.forEach(tr=>{
+
+    const td = tr.querySelectorAll('td');
+    if(td.length < 9) return;
+
+    const stage = td[0].innerText.trim();
+    const name = td[1].innerText.trim();
+
+    /*
+      第5欄：契約期限
+      第6欄：實際提送日
+      第7欄：實際/預估核定日
+      第8欄：狀態
+    */
+
+    const deadlineText = td[4].innerText.trim();
+
+    const submitInput =
+      td[5].querySelector('input[type="date"]');
+
+    const approvalInput =
+      td[6].querySelector('input[type="date"]');
+
+    const deadline =
+      dashboardParseDate(deadlineText);
+
+    const submit =
+      submitInput && submitInput.value
+        ? dashboardParseDate(submitInput.value)
+        : null;
+
+    const approval =
+      approvalInput && approvalInput.value
+        ? dashboardParseDate(approvalInput.value)
+        : null;
+
+    result.push({
+      stage,
+      name,
+      deadline,
+      submit,
+      approval
+    });
+
+  });
+
+  return result;
+}
+
+function dashboardParseDate(text){
+
+  if(!text) return null;
+
+  const m =
+    String(text).match(
+      /(\d{4})[\/-](\d{2})[\/-](\d{2})/
+    );
+
+  if(!m) return null;
+
+  return new Date(
+    Number(m[1]),
+    Number(m[2])-1,
+    Number(m[3]),
+    12,0,0,0
+  );
+}
+
+function dashboardFormatDate(d){
+
+  if(!d) return '-';
+
+  const y = d.getFullYear();
+
+  const m =
+    String(d.getMonth()+1)
+      .padStart(2,'0');
+
+  const day =
+    String(d.getDate())
+      .padStart(2,'0');
+
+  return `${y}/${m}/${day}`;
+}
+
+function dashboardNumber(text){
+
+  return Number(
+    String(text || '')
+      .replace(/[^\d.-]/g,'')
+  ) || 0;
+}
+
+function dashboardPaymentData(){
+
+  const table =
+    document.getElementById('paymentTable');
+
+  if(!table){
+    return {
+      readyCount:0,
+      readyAmount:0,
+      pendingAmount:0,
+      nextPay:null
+    };
+  }
+
+  const today = dashboardToday();
+
+  let readyCount = 0;
+  let readyAmount = 0;
+  let pendingAmount = 0;
+  let nextPay = null;
+
+  table
+    .querySelectorAll('tbody tr')
+    .forEach(tr=>{
+
+      const td = tr.querySelectorAll('td');
+
+      if(td.length < 6) return;
+
+      const trigger =
+        dashboardParseDate(
+          td[3].innerText
+        );
+
+      const payDate =
+        dashboardParseDate(
+          td[4].innerText
+        );
+
+      const amount =
+        dashboardNumber(
+          td[5].innerText
+        );
+
+      if(trigger && trigger <= today){
+
+        readyCount++;
+        readyAmount += amount;
+
+      }else{
+
+        pendingAmount += amount;
+
+      }
+
+      if(payDate && payDate >= today){
+
+        if(!nextPay || payDate < nextPay){
+          nextPay = payDate;
+        }
+
+      }
+
+    });
+
+  return {
+    readyCount,
+    readyAmount,
+    pendingAmount,
+    nextPay
+  };
+}
+
+function dashboardMoney(n){
+
+  return Number(n || 0)
+    .toLocaleString('zh-TW');
+}
+
+function renderDashboard(){
+
+  const overview =
+    document.getElementById('overview');
+
+  if(!overview) return;
+
+  const today = dashboardToday();
+
+  const todayEl =
+    document.getElementById('overviewToday');
+
+  if(todayEl){
+    todayEl.textContent =
+      dashboardFormatDate(today);
+  }
+
+  /*
+    目前標段：
+    優先讀 projectSelect 顯示文字
+  */
+
+  const projectSelect =
+    document.getElementById('projectSelect');
+
+  const projectName =
+    projectSelect &&
+    projectSelect.selectedOptions &&
+    projectSelect.selectedOptions[0]
+      ? projectSelect.selectedOptions[0].textContent
+      : '-';
+
+  const projectEl =
+    document.getElementById('ovProject');
+
+  if(projectEl){
+    projectEl.textContent = projectName;
+  }
+
+  /*
+    簽約日
+  */
+
+  const signDate =
+    document.getElementById('signDate');
+
+  const signEl =
+    document.getElementById('ovSignDate');
+
+  if(signEl){
+    signEl.textContent =
+      signDate && signDate.value
+        ? signDate.value.replaceAll('-','/')
+        : '-';
+  }
+
+  /*
+    履約主時程
+  */
+
+  const items =
+    dashboardReadSchedule();
+
+  let overdue = 0;
+  let due14 = 0;
+  let due30 = 0;
+  let pendingApproval = 0;
+  let completed = 0;
+
+  const important = [];
+
+  items.forEach(item=>{
+
+    if(item.approval){
+
+      completed++;
+
+      return;
+    }
+
+    if(item.submit && !item.approval){
+
+      pendingApproval++;
+
+      important.push({
+        ...item,
+        type:'pending',
+        label:'待核定',
+        sort:-1000
+      });
+
+      return;
+    }
+
+    if(!item.deadline) return;
+
+    const days =
+      dashboardDayDiff(
+        today,
+        item.deadline
+      );
+
+    if(days < 0){
+
+      overdue++;
+
+      important.push({
+        ...item,
+        type:'danger',
+        label:`逾期 ${Math.abs(days)} 日`,
+        sort:-10000 + days
+      });
+
+    }else if(days <= 14){
+
+      due14++;
+
+      important.push({
+        ...item,
+        type:'warning',
+        label:
+          days === 0
+            ? '今日到期'
+            : `${days} 日內到期`,
+        sort:days
+      });
+
+    }else if(days <= 30){
+
+      due30++;
+
+      important.push({
+        ...item,
+        type:'info',
+        label:`${days} 日內到期`,
+        sort:days
+      });
+
+    }
+
+  });
+
+  /*
+    KPI
+  */
+
+  setDashboardText(
+    'ovOverdue',
+    overdue
+  );
+
+  setDashboardText(
+    'ovDue14',
+    due14
+  );
+
+  setDashboardText(
+    'ovDue30',
+    due30
+  );
+
+  setDashboardText(
+    'ovPendingApproval',
+    pendingApproval
+  );
+
+  setDashboardText(
+    'ovCompleted',
+    completed
+  );
+
+  /*
+    整體狀態
+  */
+
+  let overall = '正常管制';
+
+  if(overdue > 0){
+    overall = '有逾期事項';
+  }
+  else if(due14 > 0){
+    overall = '有近期到期事項';
+  }
+  else if(pendingApproval > 0){
+    overall = '有成果待核定';
+  }
+
+  setDashboardText(
+    'ovOverallStatus',
+    overall
+  );
+
+  /*
+    成果完成度
+  */
+
+  const total = items.length;
+
+  const pct =
+    total
+      ? Math.round(
+          completed / total * 100
+        )
+      : 0;
+
+  setDashboardText(
+    'ovProgress',
+    `${pct}%`
+  );
+
+  setDashboardText(
+    'ovProgressText',
+    `${completed} / ${total}`
+  );
+
+  const progressBar =
+    document.getElementById(
+      'ovProgressBar'
+    );
+
+  if(progressBar){
+    progressBar.style.width =
+      `${pct}%`;
+  }
+
+  /*
+    近期重要工作
+  */
+
+  important.sort(
+    (a,b)=>a.sort-b.sort
+  );
+
+  const importantBox =
+    document.getElementById(
+      'ovImportantWorks'
+    );
+
+  if(importantBox){
+
+    if(!important.length){
+
+      importantBox.innerHTML = `
+        <div class="overview-empty">
+          目前無逾期、待核定或30日內到期事項
+        </div>
+      `;
+
+    }else{
+
+      importantBox.innerHTML =
+        important
+          .slice(0,8)
+          .map(item=>{
+
+            let cls = 'work-info';
+
+            if(item.type === 'danger'){
+              cls = 'work-danger';
+            }
+
+            if(item.type === 'warning'){
+              cls = 'work-warning';
+            }
+
+            if(item.type === 'pending'){
+              cls = 'work-pending';
+            }
+
+            return `
+              <div class="work-item ${cls}">
+
+                <div class="work-status">
+                  ${item.label}
+                </div>
+
+                <div class="work-name">
+                  <b>${item.name}</b>
+                  <span>
+                    ${item.submit
+                      ? '已提送 '+
+                        dashboardFormatDate(item.submit)
+                      : '尚未提送'}
+                  </span>
+                </div>
+
+                <div class="work-date">
+                  契約期限<br>
+                  <b>
+                    ${dashboardFormatDate(
+                      item.deadline
+                    )}
+                  </b>
+                </div>
+
+              </div>
+            `;
+
+          })
+          .join('');
+
+    }
+
+  }
+
+  /*
+    階段統計
+  */
+
+  const stageMap = {};
+
+  items.forEach(item=>{
+
+    if(!stageMap[item.stage]){
+
+      stageMap[item.stage] = {
+        total:0,
+        done:0
+      };
+
+    }
+
+    stageMap[item.stage].total++;
+
+    if(item.approval){
+      stageMap[item.stage].done++;
+    }
+
+  });
+
+  const stageBox =
+    document.getElementById(
+      'ovStageList'
+    );
+
+  if(stageBox){
+
+    stageBox.innerHTML =
+      Object.entries(stageMap)
+        .map(([stage,v])=>{
+
+          const p =
+            v.total
+              ? Math.round(
+                  v.done /
+                  v.total *
+                  100
+                )
+              : 0;
+
+          return `
+            <div class="stage-item">
+
+              <span>${stage}</span>
+
+              <b>
+                ${v.done}/${v.total}
+                （${p}%）
+              </b>
+
+            </div>
+          `;
+
+        })
+        .join('');
+
+  }
+
+  /*
+    付款摘要
+  */
+
+  const pay =
+    dashboardPaymentData();
+
+  setDashboardText(
+    'ovPayReadyCount',
+    `${pay.readyCount} 項`
+  );
+
+  setDashboardText(
+    'ovPayReadyAmount',
+    `${dashboardMoney(
+      pay.readyAmount
+    )} 元`
+  );
+
+  setDashboardText(
+    'ovPayPendingAmount',
+    `${dashboardMoney(
+      pay.pendingAmount
+    )} 元`
+  );
+
+  setDashboardText(
+    'ovNextPayDate',
+    pay.nextPay
+      ? dashboardFormatDate(
+          pay.nextPay
+        )
+      : '-'
+  );
+
+}
+
+function setDashboardText(id,text){
+
+  const el =
+    document.getElementById(id);
+
+  if(el){
+    el.textContent = text;
+  }
+
+}
+
+function scrollToSchedule(){
+
+  const el =
+    document.getElementById(
+      'scheduleTable'
+    );
+
+  if(el){
+    el.scrollIntoView({
+      behavior:'smooth',
+      block:'start'
+    });
+  }
+
+}
+
+function scrollToPayment(){
+
+  const el =
+    document.getElementById(
+      'paymentTable'
+    );
+
+  if(el){
+    el.scrollIntoView({
+      behavior:'smooth',
+      block:'start'
+    });
+  }
+
+}
+
+/*
+  監看既有畫面內容。
+  當 recalc、切換標段、日期變更後，
+  table DOM 有異動時重新刷新 Dashboard。
+*/
+
+const dashboardObserver =
+  new MutationObserver(()=>{
+
+    clearTimeout(
+      window.__dashboardTimer
+    );
+
+    window.__dashboardTimer =
+      setTimeout(
+        renderDashboard,
+        80
+      );
+
+  });
+
+window.addEventListener(
+  'load',
+  ()=>{
+
+    setTimeout(
+      renderDashboard,
+      300
+    );
+
+    const schedule =
+      document.getElementById(
+        'scheduleTable'
+      );
+
+    const payment =
+      document.getElementById(
+        'paymentTable'
+      );
+
+    if(schedule){
+
+      dashboardObserver.observe(
+        schedule,
+        {
+          childList:true,
+          subtree:true
+        }
+      );
+
+    }
+
+    if(payment){
+
+      dashboardObserver.observe(
+        payment,
+        {
+          childList:true,
+          subtree:true
+        }
+      );
+
+    }
+
+    /*
+      日期、標段變更時更新
+    */
+
+    document.addEventListener(
+      'change',
+      e=>{
+
+        const ids = [
+          'signDate',
+          'projectSelect',
+          'pcmDays',
+          'payMode',
+          'forecastMode'
+        ];
+
+        if(ids.includes(e.target.id)){
+
+          setTimeout(
+            renderDashboard,
+            100
+          );
+
+        }
+
+        if(
+          e.target.closest &&
+          e.target.closest(
+            '#scheduleTable'
+          )
+        ){
+
+          setTimeout(
+            renderDashboard,
+            100
+          );
+
+        }
+
+      }
+    );
+
+  }
+);
