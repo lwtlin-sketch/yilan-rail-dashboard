@@ -24,3 +24,6 @@
 .supervision-details{margin-top:18px;border:1px solid #e2e8f0;border-radius:10px;padding:0 12px 12px}.supervision-details summary{cursor:pointer;font-weight:700;padding:12px 2px}#supervisionRuleTable{min-width:850px}
 @media(max-width:900px){.timeline-kpis{grid-template-columns:1fr 1fr}.gantt-axis,.gantt-row{grid-template-columns:190px 1fr}}
 @media(max-width:600px){.gantt-axis,.gantt-row{grid-template-columns:150px 650px}.gantt-chart{overflow-x:auto}.timeline-title{display:block}.timeline-title span{display:block;margin-top:4px}.delay-item{grid-template-columns:1fr 70px}.delay-item small{grid-column:1/-1;text-align:left}}
+.deadline-contract{background:#dbeafe;color:#1d4ed8}
+.deadline-management{background:#ffedd5;color:#c2410c}
+.deadline-external{background:#f1f5f9;color:#475569}
