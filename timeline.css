@@ -138,3 +138,28 @@
     color:#475569 !important;
   }
 }
+/* =========================================================
+   Stage2 前後置表三級化／防跳穩定版
+   ========================================================= */
+#dependencyTable{
+  min-width:1180px;
+}
+
+#dependencyTable th:nth-child(4),
+#dependencyTable td:nth-child(4){
+  min-width:110px;
+}
+
+#dependencyTable th:nth-child(5),
+#dependencyTable td:nth-child(5){
+  min-width:80px;
+  text-align:center;
+}
+
+#dependencyTable th:nth-child(6),
+#dependencyTable td:nth-child(6),
+#dependencyTable th:nth-child(7),
+#dependencyTable td:nth-child(7){
+  min-width:95px;
+  text-align:center;
+}
